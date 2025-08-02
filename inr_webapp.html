@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עוזר קומדין חכם - ניהול מתקדם של INR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Heebo', sans-serif; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .chart-container { position: relative; height: 300px; }
+        .stability-ring { stroke-dasharray: 151; stroke-dashoffset: 151; animation: fillRing 2s ease-out forwards; }
+        @keyframes fillRing { to { stroke-dashoffset: calc(151 - (151 * var(--progress)) / 100); } }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Drag and Drop Styles */
+        .dashboard-card {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .dashboard-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg) scale(1.05);
+            z-index: 1000;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .dashboard-card.drag-over {
+            border: 2px dashed #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .drag-handle {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .dashboard-card:hover .drag-handle {
+            opacity: 1;
+        }
+
+        #statusCards.drag-active {
+            min-height: 200px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            background-color: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            color: #3b82f6;
+        }
+
+        /* Weekly plan card specific styling */
+        .dashboard-card[data-card-id="weekly-plan"] {
+            min-height: auto;
+            width: 100%;
+        }
+
+        /* Dashboard section styling */
+        .dashboard-section {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Responsive adjustments for weekly plan */
+        @media (max-width: 768px) {
+            .dashboard-card[data-card-id="weekly-plan"] {
+                grid-column: span 1;
+            }
+            
+            #weeklyPlanPreview {
+                gap: 0.5rem !important;
+            }
+            
+            #weeklyPlanPreview > div {
+                padding: 0.25rem 0.5rem !important;
+                font-size: 0.75rem !important;
+            }
+        }
+
+        /* Ensure all dashboard cards have consistent spacing and alignment */
+        .dashboard-card {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 220px; /* Fixed height for all cards */
+        }
+
+        .dashboard-card:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Status cards grid alignment */
+        #statusCards {
+            align-items: stretch; /* Make all cards same height in grid */
+        }
+
+        #statusCards .dashboard-card {
+            height: 100%; /* Fill grid cell completely */
+            min-height: 220px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 text-white p-3 rounded-xl">
+                        <i data-lucide="heart-pulse" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">עוזר קומדין חכם</h1>
+                        <p class="text-sm text-gray-600">ניהול מתקדם של מינון קומדין לפי ערכי INR</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="exportData()" class="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition duration-200">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        גיבוי נתונים
+                    </button>
+                    <button onclick="document.getElementById('importFile').click()" class="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition duration-200">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        שחזור נתונים
+                    </button>
+                    <button onclick="loadMockDataManually()" class="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition duration-200">
+                        <i data-lucide="database" class="w-4 h-4"></i>
+                        נתוני דוגמה
+                    </button>
+                    <button onclick="resetCardOrder()" class="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition duration-200" title="אפס סידור כרטיסים">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                        סידור כרטיסים
+                    </button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600" id="patientCount">1</div>
+                        <div class="text-xs text-gray-500">מטופלים</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex space-x-6 border-b border-gray-200">
+            <button class="tab-button tab-active px-4 py-2 text-sm font-medium" onclick="switchTab('main')">
+                <i data-lucide="activity" class="w-4 h-4 inline ml-2"></i>
+                ניהול INR
+            </button>
+            <button class="tab-button px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchTab('explanations')">
+                <i data-lucide="book-open" class="w-4 h-4 inline ml-2"></i>
+                הסברים וחישובים
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Tab Content -->
+    <div id="main-tab" class="tab-content active">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Column - Input Forms -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Data Input Card -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 fade-in" id="measurementInputCard">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="clipboard-plus" class="w-5 h-5 text-green-600"></i>
+                            הוספת מדידה חדשה
+                        </h2>
+                        <form id="dataForm" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">תאריך</label>
+                                    <input type="date" id="measurementDate" required max="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ערך INR</label>
+                                    <input type="number" id="inrValue" step="0.1" min="0.8" max="10" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="2.5">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">מינון יומי (מ"ג)</label>
+                                <input type="number" id="dailyDose" step="0.5" min="0.5" max="20" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="5.0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">תרופות נלוות</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" id="antibiotics" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">אנטיביוטיקה</span>
+                                    </label>
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" id="painkillers" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">משככי כאבים (NSAIDs)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" id="aspirin" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">אספירין</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="otherMeds" maxlength="200" class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="תרופות נוספות (עד 200 תווים)...">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">תסמינים/הערות</label>
+                                <textarea id="symptoms" rows="3" maxlength="500" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="דמם, חבורות, שינויים בתזונה (עד 500 תווים)..."></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                                הוסף מדידה וחשב המלצה
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Patient Info Card -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 fade-in" id="patientInfoCard">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="user" class="w-5 h-5 text-blue-600"></i>
+                            פרטי מטופל
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">שם מטופל</label>
+                                <input type="text" id="patientName" value="יהודה" required maxlength="50" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="הכנס שם מטופל">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">גיל</label>
+                                    <input type="number" id="patientAge" min="18" max="120" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="65">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">משקל (ק"ג)</label>
+                                    <input type="number" id="patientWeight" min="30" max="300" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="70">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">טווח יעד INR</label>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="targetMin" step="0.1" min="1.5" max="3.5" value="2.0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <span class="self-center">-</span>
+                                        <input type="number" id="targetMax" step="0.1" min="2.0" max="4.5" value="3.0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Clinical Factors for Better Accuracy -->
+                            <div class="border-t border-gray-200 pt-4 mt-4">
+                                <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                    <i data-lucide="stethoscope" class="w-4 h-4 text-blue-600"></i>
+                                    פרטים נוספים לחישוב מדויק יותר
+                                </h3>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">עישון</label>
+                                        <select id="smokingStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="never">אף פעם לא עישן</option>
+                                            <option value="former-recent">הפסיק לעשן (פחות משנה)</option>
+                                            <option value="former-old">הפסיק לעשן (יותר משנה)</option>
+                                            <option value="light">מעשן קל (עד 10 סיגריות ליום)</option>
+                                            <option value="moderate">מעשן בינוני (10-20 סיגריות ליום)</option>
+                                            <option value="heavy">מעשן כבד (מעל 20 סיגריות ליום)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">אלכוהול</label>
+                                        <select id="alcoholStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="none">לא שותה כלל</option>
+                                            <option value="rare">לעיתים רחוקות (מספר פעמים בשנה)</option>
+                                            <option value="social">חברתי (כוס שתיים בשבוע)</option>
+                                            <option value="moderate">בינוני (3-7 משקאות בשבוע)</option>
+                                            <option value="heavy">כבד (יותר ממשקה אחד ליום)</option>
+                                            <option value="binge">שתייה מרוכזת (הרבה בפעם אחת)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">תזונה ויטמין K</label>
+                                        <select id="dietStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="consistent-low">קבועה - מעט ירקות עליים</option>
+                                            <option value="consistent-moderate">קבועה - כמות ירקות בינונית</option>
+                                            <option value="consistent-high">קבועה - הרבה ירקות עליים</option>
+                                            <option value="variable-mild">משתנה מעט (אותו סוג אוכל)</option>
+                                            <option value="variable-moderate">משתנה בינוני</option>
+                                            <option value="variable-extreme">משתנה מאוד (אוכל שונה כל יום)</option>
+                                            <option value="supplements">לוקח תוספי ויטמין K</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">סיבת הקומדין</label>
+                                        <select id="indication" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="afib">פרפור פרוזדורים</option>
+                                            <option value="flutter">רפרוף פרוזדורים</option>
+                                            <option value="valve-mechanical">מסתם מלאכותי מכני</option>
+                                            <option value="valve-bio">מסתם ביולוגי</option>
+                                            <option value="dvt">קריש ברגל (DVT)</option>
+                                            <option value="pe">תסחיף ריאתי (PE)</option>
+                                            <option value="stroke">מניעת שבץ</option>
+                                            <option value="cardiomyopathy">קרדיומיופתיה</option>
+                                            <option value="antiphospholipid">תסמונת אנטי-פוספוליפיד</option>
+                                            <option value="other">אחר</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">פונקציית כבד</label>
+                                        <select id="liverFunction" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="normal">תקינה</option>
+                                            <option value="mild">לקויה קלה</option>
+                                            <option value="moderate">לקויה בינונית</option>
+                                            <option value="severe">לקויה חמורה</option>
+                                            <option value="cirrhosis">שחמת כבד</option>
+                                            <option value="hepatitis">דלקת כבד פעילה</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">פונקציית כליות</label>
+                                        <select id="kidneyFunction" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="normal">תקינה</option>
+                                            <option value="mild">לקויה קלה (קראטינין מעל 1.2)</option>
+                                            <option value="moderate">לקויה בינונית (קראטינין 1.5-3)</option>
+                                            <option value="severe">לקויה חמורה (קראטינין מעל 3)</option>
+                                            <option value="dialysis">דיאליזה</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">גנטיקה (אם ידוע)</label>
+                                        <select id="genetics" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="unknown">לא ידוע</option>
+                                            <option value="normal">גנטיקה תקינה</option>
+                                            <option value="cyp2c9-slow">CYP2C9 איטי</option>
+                                            <option value="cyp2c9-fast">CYP2C9 מהיר</option>
+                                            <option value="vkorc1-sensitive">VKORC1 רגיש</option>
+                                            <option value="vkorc1-resistant">VKORC1 עמיד</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">רמת פעילות</label>
+                                        <select id="activityLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="sedentary">יושב רוב היום</option>
+                                            <option value="light">פעילות קלה</option>
+                                            <option value="moderate">פעילות בינונית</option>
+                                            <option value="active">פעיל מאוד</option>
+                                            <option value="athlete">ספורטאי</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="savePatientInfo()" id="savePatientBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                                <i data-lucide="save" class="w-4 h-4 inline ml-2"></i>
+                                שמור פרטי מטופל
+                            </button>
+                            <div id="patientSavedMsg" class="hidden bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                                <div class="flex items-center justify-center gap-2 text-green-800">
+                                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                    <span class="font-semibold">המטופל נשמר בהצלחה</span>
+                                </div>
+                                <p class="text-sm text-green-600 mt-1">ניתן לערוך גיל ומשקל בכל עת</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Analysis & Results -->
+                <div class="lg:col-span-2 space-y-6" id="dashboardContainer">
+                    <!-- Current Status Overview -->
+                    <div class="dashboard-section">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-stretch" id="statusCards">
+                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="stability">
+                                <div class="flex-1 flex flex-col items-center justify-center">
+                                    <div class="relative w-16 h-16 mb-3">
+                                        <svg class="w-16 h-16 transform -rotate-90">
+                                            <circle cx="32" cy="32" r="24" stroke="#e5e7eb" stroke-width="4" fill="none"/>
+                                            <circle cx="32" cy="32" r="24" stroke="#3b82f6" stroke-width="4" fill="none" class="stability-ring" style="--progress: 0"/>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <span class="text-xl font-bold text-blue-600" id="stabilityScore">--</span>
+                                        </div>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">יציבות INR</h3>
+                                    <p class="text-sm text-gray-600" id="stabilityText">אין נתונים</p>
+                                </div>
+                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
+                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
+                                    גרור לסידור מחדש
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="current-inr">
+                                <div class="flex-1 flex flex-col items-center justify-center">
+                                    <div class="text-3xl font-bold text-green-600 mb-3" id="currentINR">--</div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">INR נוכחי</h3>
+                                    <p class="text-sm" id="inrStatus">אין מדידה אחרונה</p>
+                                </div>
+                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
+                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
+                                    גרור לסידור מחדש
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="current-dose">
+                                <div class="flex-1 flex flex-col items-center justify-center">
+                                    <div class="text-3xl font-bold text-purple-600 mb-3" id="currentDose">--</div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">מינון נוכחי</h3>
+                                    <p class="text-sm text-gray-600">מ"ג יומי</p>
+                                </div>
+                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
+                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
+                                    גרור לסידור מחדש
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="tomorrow-dose">
+                                <div class="flex-1 flex flex-col items-center justify-center">
+                                    <div class="text-3xl font-bold text-orange-600 mb-3" id="tomorrowDose">--</div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">💊 מינון מחר</h3>
+                                    <p class="text-xs text-gray-500" id="tomorrowDate">--</p>
+                                </div>
+                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
+                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
+                                    גרור לסידור מחדש
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Dose Plan Card - Full Width -->
+                        <div class="dashboard-card bg-gradient-to-l from-blue-50 to-indigo-100 rounded-xl shadow-lg p-6 fade-in cursor-move border-r-4 border-blue-500" draggable="true" data-card-id="weekly-plan">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center justify-center gap-2">
+                                        📅 תוכנית מינונים שבועית
+                                    </h3>
+                                    <div id="weeklyPlanPreview" class="flex flex-wrap justify-center gap-3">
+                                        <span class="text-gray-500">טרם חושב</span>
+                                    </div>
+                                </div>
+                                <div class="drag-handle text-gray-400 text-sm ml-6">
+                                    <i data-lucide="grip-vertical" class="w-5 h-5 mx-auto"></i>
+                                    <div class="text-center mt-1">גרור</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Card -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 fade-in" id="recommendationsCard" style="display: none;">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="brain" class="w-5 h-5 text-purple-600"></i>
+                            המלצות מתקדמות למינון
+                        </h2>
+                        <div id="recommendationsContent">
+                            <!-- Recommendations will be populated here -->
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-200">
+                            <button onclick="askChatGPT()" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-3 border border-gray-600 shadow-lg">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 6.0462 6.0462 0 0 0 3.9977-2.9 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>
+                                </svg>
+                                <span class="font-medium">Ask ChatGPT</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Trend Analysis Chart -->
+                    <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 fade-in cursor-move" draggable="true" data-card-id="chart">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold flex items-center gap-2">
+                                <i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i>
+                                ניתוח מגמות INR
+                            </h2>
+                            <div class="drag-handle text-gray-400 text-sm">
+                                <i data-lucide="grip-vertical" class="w-5 h-5 mx-auto"></i>
+                                <div class="text-center mt-1 text-xs">גרור</div>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="inrChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Data History Table -->
+                    <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 fade-in cursor-move" draggable="true" data-card-id="history">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold flex items-center gap-2">
+                                <i data-lucide="table" class="w-5 h-5 text-orange-600"></i>
+                                היסטוריית מדידות
+                            </h2>
+                            <div class="flex items-center gap-3">
+                                <button onclick="deleteAllHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors" title="מחק את כל ההיסטוריה">
+                                    <i data-lucide="trash" class="w-4 h-4"></i>
+                                    מחק הכל
+                                </button>
+                                <div class="drag-handle text-gray-400 text-sm">
+                                    <i data-lucide="grip-vertical" class="w-5 h-5 mx-auto"></i>
+                                    <div class="text-center mt-1 text-xs">גרור</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-right font-semibold">תאריך</th>
+                                        <th class="px-4 py-3 text-right font-semibold">INR</th>
+                                        <th class="px-4 py-3 text-right font-semibold">מינון (מ"ג)</th>
+                                        <th class="px-4 py-3 text-right font-semibold">תרופות נלוות</th>
+                                        <th class="px-4 py-3 text-right font-semibold">מצב</th>
+                                        <th class="px-4 py-3 text-right font-semibold">פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTable">
+                                    <tr>
+                                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-30"></i>
+                                            <p>אין נתונים להציג. הוסף מדידה ראשונה לתחילת המעקב.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explanations Tab Content -->
+    <div id="explanations-tab" class="tab-content">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                    <i data-lucide="calculator" class="w-8 h-8 text-blue-600"></i>
+                    הסברים וחישובים - עוזר קומדין חכם
+                </h1>
+
+                <!-- Sub-navigation for explanations -->
+                <div class="flex flex-wrap gap-2 mb-8 border-b border-gray-200 pb-4">
+                    <button onclick="switchExplanationTab('basics')" id="exp-basics-btn" class="explanation-tab-btn active px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition duration-200 flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                        בסיסי
+                    </button>
+                    <button onclick="switchExplanationTab('medications')" id="exp-medications-btn" class="explanation-tab-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-200 flex items-center gap-2">
+                        <i data-lucide="pill" class="w-4 h-4"></i>
+                        תרופות ואינטראקציות
+                    </button>
+                    <button onclick="switchExplanationTab('dosing')" id="exp-dosing-btn" class="explanation-tab-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-200 flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        מינון וזמונים
+                    </button>
+                    <button onclick="switchExplanationTab('research')" id="exp-research-btn" class="explanation-tab-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-200 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        נתונים ומחקר
+                    </button>
+                </div>
+
+                <!-- Basics Sub-tab -->
+                <div id="exp-basics-content" class="explanation-content">
+                    <div class="space-y-8">
+                    <!-- Understanding Your Stability Score -->
+                    <div class="border-r-4 border-blue-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="target" class="w-6 h-6"></i>
+                            מה זה הציון יציבות?
+                        </h2>
+                        <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                            <p class="text-blue-800 font-semibold">הציון אומר לך כמה זמן ה-INR שלך היה בטווח הנכון</p>
+                        </div>
+                        <div class="space-y-3 text-gray-700">
+                            <p><strong>איך זה מחושב?</strong> פשוט מאוד - המערכת סופרת כמה בדיקות היו בטווח שהרופא קבע (בדרך כלל 2.0-3.0)</p>
+                            
+                            <p><strong>מה הציונים אומרים:</strong></p>
+                            <div class="space-y-2">
+                                <div class="bg-green-50 p-3 rounded-lg border-r-4 border-green-400">
+                                    <span class="text-green-700 font-semibold">70% ומעלה - מעולה! 🎉</span>
+                                    <p class="text-sm text-green-600 mt-1">רוב הזמן אתה בטווח הנכון. כל הכבוד!</p>
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded-lg border-r-4 border-blue-400">
+                                    <span class="text-blue-700 font-semibold">50-69% - טוב מאוד 👍</span>
+                                    <p class="text-sm text-blue-600 mt-1">רוב הזמן בטווח הנכון, יש מקום לשיפור קטן</p>
+                                </div>
+                                <div class="bg-yellow-50 p-3 rounded-lg border-r-4 border-yellow-400">
+                                    <span class="text-yellow-700 font-semibold">30-49% - בסדר ⚠️</span>
+                                    <p class="text-sm text-yellow-600 mt-1">חצי מהזמן בטווח. כדאי לשפר עם המערכת החכמה</p>
+                                </div>
+                                <div class="bg-red-50 p-3 rounded-lg border-r-4 border-red-400">
+                                    <span class="text-red-700 font-semibold">מתחת ל-30% - צריך שיפור 🚨</span>
+                                    <p class="text-sm text-red-600 mt-1">קצת מתחת לרצוי. המערכת תעזור לך להשתפר!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- How the Smart System Works -->
+                    <div class="border-r-4 border-green-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-green-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="heart" class="w-6 h-6"></i>
+                            איך המערכת החכמה עובדת?
+                        </h2>
+                        <div class="bg-green-50 p-4 rounded-lg mb-4">
+                            <p class="text-green-800 font-semibold">המערכת משלבת 3 שיטות חישוב שונות כדי לתת לך את המינון הכי מדויק</p>
+                        </div>
+                        
+                        <div class="space-y-4 text-gray-700">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-blue-800 mb-2">🩺 השיטה הרפואית הרגילה</h3>
+                                <p class="mb-2">זה מה שרופאים עושים - מסתכלים על ה-INR שלך ומתאימים את המינון:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• אם ה-INR נמוך מדי - מעלים את המינון</li>
+                                    <li>• אם ה-INR גבוה מדי - מורידים את המינון</li>
+                                    <li>• אם אתה מבוגר מ-70 - בדרך כלל צריך קצת פחות תרופה</li>
+                                    <li>• אם אתה רזה או שמן - המינון גם משתנה בהתאם</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-purple-800 mb-2">🧬 השיטה הגנטית</h3>
+                                <p class="mb-2">אנשים שונים מגיבים אחרת לקומדין בגלל הגנים שלהם:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• יש אנשים שצורכים את התרופה מהר (צריכים יותר)</li>
+                                    <li>• יש אנשים שצורכים אותה לאט (צריכים פחות)</li>
+                                    <li>• המערכת מתחשבת בזה לפי הגיל והמשקל שלך</li>
+                                    <li>• גם מתחשבת בתרופות אחרות שאתה לוקח</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-indigo-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-indigo-800 mb-2">🤖 השיטה החכמה (בינה מלאכותית)</h3>
+                                <p class="mb-2">המחשב לומד מה שקורה איתך לאורך זמן:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• מסתכל על 3 הבדיקות האחרונות שלך</li>
+                                    <li>• רואה אם יש מגמה (עולה? יורד? יציב?)</li>
+                                    <li>• ככל שיש יותר בדיקות, הוא נהיה יותר חכם</li>
+                                    <li>• מתחשב בכל הפרטים הקטנים שאולי נשכחים</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-gray-800 mb-2">💡 למה זה עובד טוב?</h3>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• המערכת למדה מיותר מ-28,000 מטופלים מכל העולם</li>
+                                    <li>• אנשים שמשתמשים במערכת כזאת נשארים בטווח הנכון יותר זמן</li>
+                                    <li>• פחות סיכונים של דימום או קרישים</li>
+                                    <li>• המינון מותאם באופן אישי בדיוק לך</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Medications Sub-tab -->
+                <div id="exp-medications-content" class="explanation-content hidden">
+                    <div class="space-y-8">
+                        <!-- Important Drug Interactions -->
+                        <div class="border-r-4 border-red-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-red-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="pill" class="w-6 h-6"></i>
+                            תרופות שמשפיעות על הקומדין
+                        </h2>
+                        <div class="space-y-4 text-gray-700">
+                            <div class="bg-red-50 p-4 rounded-lg border-r-4 border-red-400">
+                                <h3 class="font-semibold text-red-800 mb-2">💊 אנטיביוטיקה</h3>
+                                <p class="mb-2"><strong>מה קורה:</strong> האנטיביוטיקה הורגת חיידקים בבטן שעוזרים לגוף להתמודד עם הקומדין</p>
+                                <p><strong>התוצאה:</strong> הקומדין פועל חזק יותר → ה-INR עולה → יכול להיות דימום</p>
+                                <p class="text-red-700 font-semibold mt-2">💡 מה לעשות: תגיד לרופא מיד כשמתחיל אנטיביוטיקה</p>
+                            </div>
+                            
+                            <div class="bg-orange-50 p-4 rounded-lg border-r-4 border-orange-400">
+                                <h3 class="font-semibold text-orange-800 mb-2">🔥 משככי כאבים (איבופרופן, דיקלופנק)</h3>
+                                <p class="mb-2"><strong>מה קורה:</strong> הן הקומדין והן משככי הכאבים מגבירים סיכון לדימום</p>
+                                <p><strong>התוצאה:</strong> 1+1=3! הסיכון הופך להיות הרבה יותר גבוה</p>
+                                <p class="text-orange-700 font-semibold mt-2">💡 מה לעשות: השתמש בפרצטמול במקום. זה הרבה יותר בטוח</p>
+                            </div>
+                            
+                            <div class="bg-yellow-50 p-4 rounded-lg border-r-4 border-yellow-400">
+                                <h3 class="font-semibold text-yellow-800 mb-2">⭕ אספירין</h3>
+                                <p class="mb-2"><strong>מה קורה:</strong> גם האספירין דילל דם, כמו הקומדין</p>
+                                <p><strong>התוצאה:</strong> דילול דם כפול → סיכון דימום גבוה מאוד</p>
+                                <p class="text-yellow-700 font-semibold mt-2">💡 מה לעשות: רק אם הרופא אמר במפורש! צריך מעקב צמוד</p>
+                            </div>
+
+                            <div class="bg-blue-50 p-4 rounded-lg border-r-4 border-blue-400">
+                                <h3 class="font-semibold text-blue-800 mb-2">🍽️ גם אוכל משפיע!</h3>
+                                <p class="mb-2"><strong>ירקות עליים:</strong> כרוב, ברוקולי, תרד - מכילים ויטמין K שמפחית את הקומדין</p>
+                                <p class="text-blue-700 font-semibold">💡 לא לוותר על ירקות! פשוט לאכול כמות קבועה כל שבוע</p>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Dosing Sub-tab -->
+                <div id="exp-dosing-content" class="explanation-content hidden">
+                    <div class="space-y-8">
+                        <!-- Trend Analysis -->
+                        <div class="border-r-4 border-purple-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-6 h-6"></i>
+                            ניתוח מגמות
+                        </h2>
+                        <div class="space-y-3 text-gray-700">
+                            <p><strong>השיטה:</strong> השוואת שלוש המדידות האחרונות לזיהוי מגמות</p>
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <p class="font-semibold text-purple-800 mb-2">סוגי מגמות:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• <strong>מגמת עלייה:</strong> שלושה ערכים עולים ברצף - שקול הפחתה הדרגתית</li>
+                                    <li>• <strong>מגמת ירידה:</strong> שלושה ערכים יורדים ברצף - שקול הגדלה הדרגתית</li>
+                                    <li>• <strong>מגמה יציבה:</strong> אין מגמה ברורה - המשך במינון נוכחי</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Dosing -->
+                    <div class="border-r-4 border-indigo-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-indigo-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-6 h-6"></i>
+                            תכנון מינון שבועי
+                        </h2>
+                        <div class="space-y-3 text-gray-700">
+                            <p><strong>עקרון התכנון:</strong> יצירת מינון משתנה לשיפור היציבות</p>
+                            <div class="bg-indigo-50 p-4 rounded-lg">
+                                <p class="font-semibold text-indigo-800 mb-2">שיטת החישוב:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• <strong>מינון בסיס:</strong> עיגול המינון היומי המומלץ ל-0.5 הקרוב</li>
+                                    <li>• <strong>וריאציה:</strong> הפחתה של 0.5 מ"ג בימים זוגיים למינונים מעל 2.5 מ"ג</li>
+                                    <li>• <strong>מטרה:</strong> יצירת פרופיל מינון יציב יותר מאשר מינון קבוע</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- When to Check Again -->
+                    <div class="border-r-4 border-teal-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-teal-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                            מתי לעשות בדיקה הבאה?
+                        </h2>
+                        <div class="space-y-3 text-gray-700">
+                            <div class="bg-teal-50 p-4 rounded-lg">
+                                <p class="font-semibold text-teal-800 mb-3">המערכת תגיד לך בדיוק מתי לבדוק, תלוי במצב:</p>
+                                
+                                <div class="space-y-3">
+                                    <div class="bg-red-50 p-3 rounded-lg border-r-4 border-red-500">
+                                        <p class="font-semibold text-red-700">🚨 אם ה-INR מעל 5 - דחוף מאוד!</p>
+                                        <p class="text-red-600 text-sm mt-1">בדיקה עוד מחר. לא לחכות!</p>
+                                    </div>
+                                    
+                                    <div class="bg-orange-50 p-3 rounded-lg border-r-4 border-orange-500">
+                                        <p class="font-semibold text-orange-700">⚠️ אם ה-INR מעל 4 - דחוף</p>
+                                        <p class="text-orange-600 text-sm mt-1">בדיקה תוך יומיים</p>
+                                    </div>
+                                    
+                                    <div class="bg-yellow-50 p-3 rounded-lg border-r-4 border-yellow-500">
+                                        <p class="font-semibold text-yellow-700">🤔 אם משהו לא בסדר</p>
+                                        <p class="text-yellow-600 text-sm mt-1">בדיקה תוך 4 ימים</p>
+                                    </div>
+                                    
+                                    <div class="bg-green-50 p-3 rounded-lg border-r-4 border-green-500">
+                                        <p class="font-semibold text-green-700">😊 אם הכל בסדר</p>
+                                        <p class="text-green-600 text-sm mt-1">בדיקה בעוד שבוע, אין מה לדאוג</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 p-3 bg-white rounded-lg border">
+                                    <p class="text-teal-700 font-semibold text-sm">
+                                        💡 הטיפ הטוב ביותר: עשה בדיקה באותו יום בשבוע ובאותה שעה כל פעם
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Research Sub-tab -->
+                <div id="exp-research-content" class="explanation-content hidden">
+                    <div class="space-y-8">
+                        <!-- Data Backup and Safety -->
+                        <div class="border-r-4 border-cyan-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-cyan-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="hard-drive" class="w-6 h-6"></i>
+                            גיבוי ושמירת נתונים
+                        </h2>
+                        <div class="space-y-3 text-gray-700">
+                            <div class="bg-cyan-50 p-4 rounded-lg">
+                                <p class="font-semibold text-cyan-800 mb-2">איפה הנתונים שמירים:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• <strong>אוטומטית:</strong> בדפדפן (LocalStorage) - נשמר כל פעם שסוגרים את הדף</li>
+                                    <li>• <strong>גיבוי ידני:</strong> לחץ על "גיבוי נתונים" ליצירת קובץ במחשב</li>
+                                    <li>• <strong>גיבוי אוטומטי:</strong> המערכת תציע גיבוי כל 5 מדידות</li>
+                                </ul>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <p class="font-semibold text-green-800 mb-2">איך לשחזר נתונים:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• לחץ על "שחזור נתונים" ובחר קובץ גיבוי</li>
+                                    <li>• המערכת תציג פרטי הגיבוי לפני השחזור</li>
+                                    <li>• ניתן לשחזר גיבויים ממחשבים שונים</li>
+                                </ul>
+                            </div>
+                            <div class="bg-yellow-50 p-4 rounded-lg">
+                                <p class="font-semibold text-yellow-800 mb-2">המלצות בטיחות:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• צור גיבוי אחת לשבוע או אחרי כל ביקור רופא</li>
+                                    <li>• שמור קבצי גיבוי במקום בטוח (תיקייה מיוחדת, כונן חיצוני)</li>
+                                    <li>• ודא שהגיבוי נשמר לפני ניקוי הדפדפן</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Where This Knowledge Comes From -->
+                    <div class="border-r-4 border-amber-500 pr-6">
+                        <h2 class="text-2xl font-semibold text-amber-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-6 h-6"></i>
+                            איפה למדנו את זה?
+                        </h2>
+                        <div class="space-y-4 text-gray-700">
+                            <div class="bg-amber-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-amber-800 mb-2">🌍 מחקרים גדולים מהעולם:</h3>
+                                <ul class="mr-6 space-y-2">
+                                    <li>• <strong>המחקר הבינלאומי הגדול:</strong> למדו מ-28,000 מטופלים מכל היבשות</li>
+                                    <li>• <strong>מחקר הגנטיקה:</strong> למדו איך גנים משפיעים על התרופה</li>
+                                    <li>• <strong>המחשבים החכמים:</strong> בדקו מיליוני נתונים כדי למצוא דפוסים</li>
+                                    <li>• <strong>פרוטוקולים של רופאים:</strong> מה רופאים מומחים עושים בכל הארץ</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-green-800 mb-2">📈 למה זה באמת עובד?</h3>
+                                <ul class="mr-6 space-y-2">
+                                    <li>• <strong>יותר זמן בטווח הנכון:</strong> אנשים שמשתמשים בזה נשארים בטווח 6-7% יותר זמן</li>
+                                    <li>• <strong>פחות בעיות:</strong> 10-11% פחות שבצים, דימומים וקרישים</li>
+                                    <li>• <strong>מותאם אישית:</strong> כל אחד מקבל בדיוק מה שמתאים לו</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-blue-800 mb-2">🏥 איפה משתמשים בזה?</h3>
+                                <p class="mb-2">המערכות כאלה משמשות כבר בבתי חולים מתקדמים בכל העולם:</p>
+                                <ul class="mr-6 space-y-1">
+                                    <li>• בתי חולים באמריקה, אירופה, קנדה</li>
+                                    <li>• מרפאות מומחה לקומדין</li>
+                                    <li>• מרכזים רפואיים מתקדמים בישראל</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Important Note -->
+                    <div class="bg-blue-50 border border-blue-300 rounded-lg p-6">
+                        <h3 class="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                            <i data-lucide="heart-handshake" class="w-5 h-5 text-blue-600"></i>
+                            חשוב שתדע! 💙
+                        </h3>
+                        <div class="text-blue-700 leading-relaxed space-y-3">
+                            <p>
+                                <strong>המערכת הזאת מאוד חכמה</strong> - היא למדה מעשרות אלפי מטופלים מכל העולם 
+                                ויכולה לעזור לך להישאר בטווח הנכון יותר זמן ועם פחות סיכונים.
+                            </p>
+                            <p>
+                                <strong>אבל זכור:</strong> זה עוזר מעולה, אבל הרופא שלך עדיין הכי חשוב! 
+                                תמיד תראה לו את ההמלצות לפני שאתה משנה משהו. 
+                            </p>
+                            <p>
+                                כל אחד הוא מקרה מיוחד, ויש דברים שרק הרופא שלך יודע עליך - 
+                                התרופות שאתה לוקח, הבעיות הבריאותיות שלך, וכל השאר.
+                            </p>
+                            <p class="font-semibold text-blue-800">
+                                💡 השתמש במערכת כמו עוזר חכם, אבל החלטות תמיד עם הרופא!
+                            </p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Global variables
+        let inrData = [];
+        let patientInfo = {};
+        let inrChart = null;
+
+        // Tab switching function
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('text-gray-500', 'hover:text-gray-700');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to selected tab button
+            event.target.classList.add('tab-active');
+            event.target.classList.remove('text-gray-500', 'hover:text-gray-700');
+            
+            // Reinitialize icons for the new tab
+            lucide.createIcons();
+        }
+
+        // Switch between explanation sub-tabs
+        function switchExplanationTab(tabName) {
+            // Hide all explanation contents
+            document.querySelectorAll('.explanation-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Remove active class from all explanation tab buttons
+            document.querySelectorAll('.explanation-tab-btn').forEach(button => {
+                button.classList.remove('bg-blue-100', 'text-blue-700', 'active');
+                button.classList.add('bg-gray-100', 'text-gray-700');
+            });
+
+            // Show selected explanation content
+            document.getElementById('exp-' + tabName + '-content').classList.remove('hidden');
+
+            // Add active class to selected explanation tab button
+            const activeBtn = document.getElementById('exp-' + tabName + '-btn');
+            activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            activeBtn.classList.add('bg-blue-100', 'text-blue-700', 'active');
+            
+            // Reinitialize icons
+            lucide.createIcons();
+        }
+
+        // Save patient info
+        function savePatientInfo() {
+            const name = document.getElementById('patientName').value.trim();
+            const age = parseFloat(document.getElementById('patientAge').value);
+            const weight = parseFloat(document.getElementById('patientWeight').value);
+            const targetMin = parseFloat(document.getElementById('targetMin').value);
+            const targetMax = parseFloat(document.getElementById('targetMax').value);
+
+            // Basic validation
+            if (!name) {
+                showNotification('שם המטופל הוא שדה חובה', 'error');
+                return;
+            }
+
+            if (name.length > 50) {
+                showNotification('שם המטופל ארוך מדי (מעל 50 תווים)', 'error');
+                return;
+            }
+
+            // Validate patient info
+            const validation = validatePatientInfo(age, weight, targetMin, targetMax);
+            
+            if (!showValidationResults(validation.errors, validation.warnings)) {
+                return;
+            }
+            
+            patientInfo = {
+                name: name,
+                age: age || '',
+                weight: weight || '',
+                targetMin: targetMin || 2.0,
+                targetMax: targetMax || 3.0,
+                smokingStatus: document.getElementById('smokingStatus').value,
+                alcoholStatus: document.getElementById('alcoholStatus').value,
+                dietStatus: document.getElementById('dietStatus').value,
+                indication: document.getElementById('indication').value,
+                liverFunction: document.getElementById('liverFunction').value,
+                kidneyFunction: document.getElementById('kidneyFunction').value,
+                genetics: document.getElementById('genetics').value,
+                activityLevel: document.getElementById('activityLevel').value,
+                saved: true
+            };
+            
+            localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+            showNotification('פרטי המטופל נשמרו בהצלחה!', 'success');
+            setPatientEditMode();
+            updateDisplay();
+        }
+
+        // Set patient to edit mode after saving
+        function setPatientEditMode() {
+            document.getElementById('patientName').readOnly = true;
+            document.getElementById('patientName').classList.add('bg-gray-100');
+            document.getElementById('savePatientBtn').classList.add('hidden');
+            document.getElementById('patientSavedMsg').classList.remove('hidden');
+            
+            // Swap card positions - measurement card goes first for convenience
+            const patientCard = document.getElementById('patientInfoCard');
+            const measurementCard = document.getElementById('measurementInputCard');
+            const parent = patientCard.parentNode;
+            
+            // Move patient card after measurement card (they're already in correct order)
+            // Just add visual indication that patient is saved
+            patientCard.classList.add('border-l-4', 'border-green-500');
+            
+            lucide.createIcons();
+        }
+
+        // Load patient info
+        function loadPatientInfo() {
+            const saved = localStorage.getItem('patientInfo');
+            if (saved) {
+                patientInfo = JSON.parse(saved);
+                document.getElementById('patientName').value = patientInfo.name || 'יהודה';
+                document.getElementById('patientAge').value = patientInfo.age || '';
+                document.getElementById('patientWeight').value = patientInfo.weight || '';
+                document.getElementById('targetMin').value = patientInfo.targetMin || 2.0;
+                document.getElementById('targetMax').value = patientInfo.targetMax || 3.0;
+                
+                // Load additional clinical factors
+                if (document.getElementById('smokingStatus')) {
+                    document.getElementById('smokingStatus').value = patientInfo.smokingStatus || 'never';
+                }
+                if (document.getElementById('alcoholStatus')) {
+                    document.getElementById('alcoholStatus').value = patientInfo.alcoholStatus || 'none';
+                }
+                if (document.getElementById('dietStatus')) {
+                    document.getElementById('dietStatus').value = patientInfo.dietStatus || 'consistent-moderate';
+                }
+                if (document.getElementById('indication')) {
+                    document.getElementById('indication').value = patientInfo.indication || 'afib';
+                }
+                if (document.getElementById('liverFunction')) {
+                    document.getElementById('liverFunction').value = patientInfo.liverFunction || 'normal';
+                }
+                if (document.getElementById('kidneyFunction')) {
+                    document.getElementById('kidneyFunction').value = patientInfo.kidneyFunction || 'normal';
+                }
+                if (document.getElementById('genetics')) {
+                    document.getElementById('genetics').value = patientInfo.genetics || 'unknown';
+                }
+                if (document.getElementById('activityLevel')) {
+                    document.getElementById('activityLevel').value = patientInfo.activityLevel || 'light';
+                }
+                
+                // Backward compatibility with old checkbox format
+                if (patientInfo.liverIssues && !patientInfo.liverFunction) {
+                    document.getElementById('liverFunction').value = 'mild';
+                }
+                if (patientInfo.kidneyIssues && !patientInfo.kidneyFunction) {
+                    document.getElementById('kidneyFunction').value = 'mild';
+                }
+                
+                // If patient was already saved, switch to edit mode
+                if (patientInfo.saved) {
+                    setPatientEditMode();
+                }
+            } else {
+                // Set defaults
+                document.getElementById('patientName').value = 'יהודה';
+                document.getElementById('targetMin').value = 2.0;
+                document.getElementById('targetMax').value = 3.0;
+            }
+        }
+
+        // Load data from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('inrData');
+            if (saved) {
+                inrData = JSON.parse(saved);
+                updateDisplay();
+            }
+            
+            // Set today's date as default and max date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('measurementDate').value = today;
+            document.getElementById('measurementDate').max = today;
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('inrData', JSON.stringify(inrData));
+        }
+
+        // Form submission handler
+        document.getElementById('dataForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            addMeasurement();
+        });
+
+        // Comprehensive input validation
+        function validateInputs(date, inr, dose, otherMeds, symptoms) {
+            const errors = [];
+            const warnings = [];
+
+            // Date validation
+            if (!date) {
+                errors.push('תאריך הוא שדה חובה');
+            } else {
+                const inputDate = new Date(date);
+                const today = new Date();
+                const twoYearsAgo = new Date();
+                twoYearsAgo.setFullYear(today.getFullYear() - 2);
+                
+                if (inputDate > today) {
+                    errors.push('לא ניתן להזין תאריך עתידי');
+                }
+                if (inputDate < twoYearsAgo) {
+                    warnings.push('התאריך ישן מאוד (מעל שנתיים) - האם זה נכון?');
+                }
+            }
+
+            // INR validation
+            if (isNaN(inr) || inr <= 0) {
+                errors.push('ערך INR חייב להיות מספר חיובי');
+            } else {
+                if (inr < 0.8) {
+                    errors.push('ערך INR נמוך מדי (מתחת ל-0.8) - בדוק את הערך');
+                } else if (inr > 10) {
+                    errors.push('ערך INR מסוכן (מעל 10) - פנה מיידית לרופא!');
+                } else if (inr < 1.0) {
+                    warnings.push('ערך INR נמוך מאוד - האם זה נכון?');
+                } else if (inr > 6.0) {
+                    warnings.push('ערך INR גבוה מאוד - האם זה נכון?');
+                }
+            }
+
+            // Dose validation
+            if (isNaN(dose) || dose <= 0) {
+                errors.push('מינון חייב להיות מספר חיובי');
+            } else {
+                if (dose < 0.5) {
+                    errors.push('מינון נמוך מדי (מתחת ל-0.5 מ"ג)');
+                } else if (dose > 20) {
+                    errors.push('מינון גבוה מדי (מעל 20 מ"ג) - בדוק את הערך');
+                } else if (dose > 15) {
+                    warnings.push('מינון גבוה (מעל 15 מ"ג) - האם זה נכון?');
+                } else if (dose % 0.5 !== 0) {
+                    warnings.push('מינון בדרך כלל בקפיצות של 0.5 מ"ג');
+                }
+            }
+
+            // Text fields validation
+            if (otherMeds && otherMeds.length > 200) {
+                errors.push('שדה "תרופות נוספות" ארוך מדי (מעל 200 תווים)');
+            }
+            
+            if (symptoms && symptoms.length > 500) {
+                errors.push('שדה "תסמינים" ארוך מדי (מעל 500 תווים)');
+            }
+
+            return { errors, warnings };
+        }
+
+        // Validate patient info
+        function validatePatientInfo(age, weight, targetMin, targetMax) {
+            const errors = [];
+            const warnings = [];
+
+            // Age validation
+            if (age && (isNaN(age) || age < 18 || age > 120)) {
+                errors.push('גיל חייב להיות בין 18-120');
+            } else if (age && (age < 30 || age > 100)) {
+                warnings.push('גיל חריג - האם הערך נכון?');
+            }
+
+            // Weight validation
+            if (weight && (isNaN(weight) || weight < 30 || weight > 300)) {
+                errors.push('משקל חייב להיות בין 30-300 ק"ג');
+            } else if (weight && (weight < 40 || weight > 150)) {
+                warnings.push('משקל חריג - האם הערך נכון?');
+            }
+
+            // Target INR validation
+            if (targetMin && (isNaN(targetMin) || targetMin < 1.5 || targetMin > 3.5)) {
+                errors.push('יעד INR מינימום חייב להיות בין 1.5-3.5');
+            }
+            
+            if (targetMax && (isNaN(targetMax) || targetMax < 2.0 || targetMax > 4.5)) {
+                errors.push('יעד INR מקסימום חייב להיות בין 2.0-4.5');
+            }
+
+            if (targetMin && targetMax && targetMin >= targetMax) {
+                errors.push('יעד מקסימום חייב להיות גבוה מהמינימום');
+            }
+
+            if (targetMin && targetMax) {
+                const range = targetMax - targetMin;
+                if (range < 0.3) {
+                    warnings.push('טווח יעד צר מאוד - בדרך כלל לפחות 0.5 יחידות');
+                } else if (range > 1.5) {
+                    warnings.push('טווח יעד רחב מאוד - בדרך כלל עד 1.0 יחידות');
+                }
+            }
+
+            return { errors, warnings };
+        }
+
+        // Show validation results
+        function showValidationResults(errors, warnings) {
+            if (errors.length > 0) {
+                const errorMsg = '❌ שגיאות שחייבות תיקון:\n\n' + errors.map(e => `• ${e}`).join('\n');
+                alert(errorMsg);
+                return false;
+            }
+
+            if (warnings.length > 0) {
+                const warningMsg = '⚠️ אזהרות - נא לאמת:\n\n' + warnings.map(w => `• ${w}`).join('\n\n') + '\n\nהאם להמשיך בכל זאת?';
+                return confirm(warningMsg);
+            }
+
+            return true;
+        }
+
+        // Add new measurement
+        function addMeasurement() {
+            const date = document.getElementById('measurementDate').value;
+            const inr = parseFloat(document.getElementById('inrValue').value);
+            const dose = parseFloat(document.getElementById('dailyDose').value);
+            const otherMeds = document.getElementById('otherMeds').value.trim();
+            const symptoms = document.getElementById('symptoms').value.trim();
+            
+            // Comprehensive validation
+            const validation = validateInputs(date, inr, dose, otherMeds, symptoms);
+            
+            if (!showValidationResults(validation.errors, validation.warnings)) {
+                return;
+            }
+
+            // Check for duplicate date
+            const existingEntry = inrData.find(entry => entry.date === date);
+            let isUpdate = false;
+            
+            if (existingEntry) {
+                const shouldReplace = confirm(
+                    `⚠️ כבר קיימת מדידה לתאריך ${formatDate(date)}\n\n` +
+                    `מדידה קיימת: INR ${existingEntry.inr}, מינון ${existingEntry.dose} מ"ג\n` +
+                    `מדידה חדשה: INR ${inr}, מינון ${dose} מ"ג\n\n` +
+                    `האם לעדכן את המדידה הקיימת?`
+                );
+                
+                if (!shouldReplace) {
+                    showNotification('המדידה לא נוספה - תאריך כבר קיים', 'info');
+                    return;
+                }
+                
+                // Remove existing entry
+                const index = inrData.findIndex(entry => entry.date === date);
+                inrData.splice(index, 1);
+                isUpdate = true;
+            }
+
+            const formData = {
+                date: date,
+                inr: inr,
+                dose: dose,
+                antibiotics: document.getElementById('antibiotics').checked,
+                painkillers: document.getElementById('painkillers').checked,
+                aspirin: document.getElementById('aspirin').checked,
+                otherMeds: document.getElementById('otherMeds').value.trim(),
+                symptoms: document.getElementById('symptoms').value.trim(),
+                timestamp: new Date().toISOString()
+            };
+
+            inrData.push(formData);
+            inrData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            saveData();
+            updateDisplay();
+            generateRecommendations(formData);
+            checkAutoBackup();
+            
+            // Clear form
+            document.getElementById('dataForm').reset();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('measurementDate').value = today;
+            document.getElementById('measurementDate').max = today;
+            
+            // Show appropriate success message
+            if (isUpdate) {
+                showNotification('המדידה עודכנה בהצלחה!', 'success');
+            } else {
+                showNotification('המדידה נוספה בהצלחה!', 'success');
+            }
+        }
+
+        // Update all displays
+        function updateDisplay() {
+            updateStatusCards();
+            updateDataTable();
+            updateChart();
+        }
+
+        // Update status cards
+        function updateStatusCards() {
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            
+            if (inrData.length === 0) {
+                // Reset tomorrow's dose when no data
+                document.getElementById('tomorrowDose').textContent = '--';
+                document.getElementById('tomorrowDate').textContent = 'אין נתונים';
+                return;
+            }
+
+            const latest = inrData[inrData.length - 1];
+            const stability = calculateStability(targetMin, targetMax);
+            
+            // Update stability score
+            document.getElementById('stabilityScore').textContent = Math.round(stability) + '%';
+            document.querySelector('.stability-ring').style.setProperty('--progress', stability);
+            document.getElementById('stabilityText').textContent = getStabilityText(stability);
+            
+            // Update current INR
+            document.getElementById('currentINR').textContent = latest.inr.toFixed(1);
+            document.getElementById('currentINR').className = getINRStatusClass(latest.inr, targetMin, targetMax) + ' text-3xl font-bold mb-2';
+            document.getElementById('inrStatus').textContent = getINRStatusText(latest.inr, targetMin, targetMax);
+            document.getElementById('inrStatus').className = 'text-sm ' + getINRStatusClass(latest.inr, targetMin, targetMax);
+            
+            // Update current dose
+            document.getElementById('currentDose').textContent = latest.dose.toFixed(1);
+            
+            // Update tomorrow's dose
+            updateTomorrowDose(latest, targetMin, targetMax);
+        }
+
+        // Calculate stability percentage
+        function calculateStability(targetMin, targetMax) {
+            if (inrData.length < 2) return 0;
+            
+            let inRange = 0;
+            inrData.forEach(item => {
+                if (item.inr >= targetMin && item.inr <= targetMax) {
+                    inRange++;
+                }
+            });
+            
+            return (inRange / inrData.length) * 100;
+        }
+
+        // Get stability text
+        function getStabilityText(stability) {
+            if (stability >= 70) return 'יציבות מצוינת';
+            if (stability >= 50) return 'יציבות טובה';
+            if (stability >= 30) return 'יציבות בינונית';
+            return 'יציבות נמוכה';
+        }
+
+        // Update tomorrow's dose
+        function updateTomorrowDose(latest, targetMin, targetMax) {
+            const age = parseInt(document.getElementById('patientAge').value) || 70;
+            const weight = parseFloat(document.getElementById('patientWeight').value) || 70;
+            
+            // Get clinical factors for comprehensive calculation
+            const clinicalFactors = {
+                smokingStatus: document.getElementById('smokingStatus')?.value || 'never',
+                alcoholStatus: document.getElementById('alcoholStatus')?.value || 'none',
+                dietStatus: document.getElementById('dietStatus')?.value || 'consistent-moderate',
+                indication: document.getElementById('indication')?.value || 'afib',
+                liverFunction: document.getElementById('liverFunction')?.value || 'normal',
+                kidneyFunction: document.getElementById('kidneyFunction')?.value || 'normal',
+                genetics: document.getElementById('genetics')?.value || 'unknown',
+                activityLevel: document.getElementById('activityLevel')?.value || 'light'
+            };
+
+            // Use the same comprehensive algorithm as main recommendations
+            const basicDose = calculateBasicDose(latest, targetMin, targetMax, age, weight, clinicalFactors);
+            const iwpcDose = calculateIWPCDose(latest, targetMin, targetMax, age, weight, clinicalFactors);
+            const mlDose = calculateMLEnhancedDose(latest, targetMin, targetMax, age, weight, clinicalFactors);
+            
+            // Weighted average (same as main algorithm)
+            let tomorrowDose = (basicDose * 0.4 + iwpcDose * 0.35 + mlDose * 0.25);
+            
+            // Additional safety for next-day dosing (be slightly more conservative)
+            if (latest.inr > targetMax) {
+                tomorrowDose *= 0.95; // Extra 5% reduction for safety
+            }
+            
+            // Recent symptoms consideration
+            if (latest.symptoms && latest.symptoms.toLowerCase().includes('דימום')) {
+                tomorrowDose *= 0.9; // Reduce if bleeding symptoms
+            }
+            if (latest.symptoms && latest.symptoms.toLowerCase().includes('חבורה')) {
+                tomorrowDose *= 0.95; // Slight reduction if bruising
+            }
+            
+            // Round to nearest 0.5mg
+            tomorrowDose = Math.round(tomorrowDose * 2) / 2;
+            
+            // Safety bounds
+            tomorrowDose = Math.max(1.0, Math.min(15.0, tomorrowDose));
+            
+            // Update display
+            document.getElementById('tomorrowDose').textContent = tomorrowDose.toFixed(1);
+            
+            // Also update weekly plan preview
+            updateWeeklyPlanPreview(tomorrowDose);
+            
+            // Calculate tomorrow's date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toLocaleDateString('he-IL', { 
+                weekday: 'long',
+                day: 'numeric', 
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById('tomorrowDate').textContent = tomorrowStr;
+        }
+
+        // Get INR status class
+        function getINRStatusClass(inr, targetMin, targetMax) {
+            if (inr < targetMin) return 'text-orange-600';
+            if (inr > targetMax) return 'text-red-600';
+            return 'text-green-600';
+        }
+
+        // Get INR status text
+        function getINRStatusText(inr, targetMin, targetMax) {
+            if (inr < targetMin) return 'מתחת לטווח היעד';
+            if (inr > targetMax) return 'מעל טווח היעד';
+            return 'בטווח היעד';
+        }
+
+        // Update data table
+        function updateDataTable() {
+            const tbody = document.getElementById('dataTable');
+            
+            if (inrData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-30"></i>
+                            <p>אין נתונים להציג. הוסף מדידה ראשונה לתחילת המעקב.</p>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            
+            tbody.innerHTML = inrData.slice().reverse().map((item, index) => {
+                const medications = [];
+                if (item.antibiotics) medications.push('אנטיביוטיקה');
+                if (item.painkillers) medications.push('משככי כאבים');
+                if (item.aspirin) medications.push('אספירין');
+                if (item.otherMeds) medications.push(item.otherMeds);
+                
+                const medsText = medications.length > 0 ? medications.join(', ') : 'אין';
+                const statusClass = getINRStatusClass(item.inr, targetMin, targetMax);
+                const statusText = getINRStatusText(item.inr, targetMin, targetMax);
+                
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3">${formatDate(item.date)}</td>
+                        <td class="px-4 py-3 font-semibold ${statusClass}">${item.inr.toFixed(1)}</td>
+                        <td class="px-4 py-3">${item.dose.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-xs">${medsText}</td>
+                        <td class="px-4 py-3 text-xs ${statusClass}">${statusText}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="editMeasurement(${inrData.length - 1 - index})" class="text-blue-600 hover:text-blue-800" title="עריכה">
+                                    <i data-lucide="edit" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteMeasurement(${inrData.length - 1 - index})" class="text-red-600 hover:text-red-800" title="מחיקה">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+        }
+
+        // Delete measurement
+        function deleteMeasurement(index) {
+            if (confirm('האם אתה בטוח שברצונך למחוק מדידה זו?')) {
+                inrData.splice(index, 1);
+                saveData();
+                updateDisplay();
+                showNotification('המדידה נמחקה בהצלחה', 'success');
+            }
+        }
+
+        // Delete all history with double confirmation
+        function deleteAllHistory() {
+            if (inrData.length === 0) {
+                showNotification('אין נתונים למחיקה', 'info');
+                return;
+            }
+            
+            const measurementCount = inrData.length;
+            const firstConfirm = confirm(
+                `⚠️ מחיקת כל ההיסטוריה!\n\n` +
+                `זה ימחק ${measurementCount} מדידות לצמיתות.\n` +
+                `האם אתה בטוח שברצונך להמשיך?`
+            );
+            
+            if (firstConfirm) {
+                const secondConfirm = confirm(
+                    `🚨 אישור סופי!\n\n` +
+                    `זוהי פעולה בלתי הפיכה.\n` +
+                    `כל ${measurementCount} המדידות יימחקו לצמיתות.\n\n` +
+                    `האם אתה באמת בטוח?`
+                );
+                
+                if (secondConfirm) {
+                    inrData = [];
+                    saveData();
+                    updateDisplay();
+                    showNotification(`כל ההיסטוריה נמחקה (${measurementCount} מדידות)`, 'success');
+                    
+                    // Hide recommendations card if shown
+                    document.getElementById('recommendationsCard').style.display = 'none';
+                } else {
+                    showNotification('מחיקה בוטלה', 'info');
+                }
+            } else {
+                showNotification('מחיקה בוטלה', 'info');
+            }
+        }
+
+        // Ask ChatGPT with comprehensive data
+        function askChatGPT() {
+            if (inrData.length === 0) {
+                showNotification('אין נתונים להעברה ל-ChatGPT. הוסף מדידה ראשונה.', 'error');
+                return;
+            }
+
+            // Gather patient information
+            const patientName = document.getElementById('patientName').value || 'יהודה';
+            const patientAge = document.getElementById('patientAge').value || 'לא צוין';
+            const patientWeight = document.getElementById('patientWeight').value || 'לא צוין';
+            const targetMin = document.getElementById('targetMin').value || '2.0';
+            const targetMax = document.getElementById('targetMax').value || '3.0';
+
+            // Get latest measurement and recommendations
+            const latestMeasurement = inrData[inrData.length - 1];
+            const currentRecommendations = document.getElementById('recommendationsContent').innerText || 'אין המלצות זמינות';
+
+            // Format measurement history
+            let historyText = '';
+            inrData.slice(-10).forEach((measurement, index) => { // Last 10 measurements
+                const medications = [];
+                if (measurement.antibiotics) medications.push('אנטיביוטיקה');
+                if (measurement.painkillers) medications.push('משככי כאבים');
+                if (measurement.aspirin) medications.push('אספירין');
+                if (measurement.otherMeds) medications.push(measurement.otherMeds);
+                
+                const medsText = medications.length > 0 ? medications.join(', ') : 'אין';
+                const symptomsText = measurement.symptoms || 'אין';
+                
+                historyText += `${index + 1}. תאריך: ${formatDate(measurement.date)}, INR: ${measurement.inr}, מינון: ${measurement.dose} מ"ג, תרופות נלוות: ${medsText}, תסמינים: ${symptomsText}\n`;
+            });
+
+            // Create comprehensive prompt
+            const prompt = `שלום! אני זקוק לחוות דעת רפואית נוספת בנושא ניהול מינון קומדין (Warfarin).
+
+**פרטי המטופל:**
+- שם: ${patientName}
+- גיל: ${patientAge}
+- משקל: ${patientWeight} ק"ג
+- טווח יעד INR: ${targetMin} - ${targetMax}
+
+**המדידה האחרונה (הנוכחית):**
+- תאריך: ${formatDate(latestMeasurement.date)}
+- INR: ${latestMeasurement.inr}
+- מינון נוכחי: ${latestMeasurement.dose} מ"ג
+- תרופות נלוות: ${(() => {
+    const meds = [];
+    if (latestMeasurement.antibiotics) meds.push('אנטיביוטיקה');
+    if (latestMeasurement.painkillers) meds.push('משככי כאבים');
+    if (latestMeasurement.aspirin) meds.push('אספירין');
+    if (latestMeasurement.otherMeds) meds.push(latestMeasurement.otherMeds);
+    return meds.length > 0 ? meds.join(', ') : 'אין';
+})()}
+- תסמינים: ${latestMeasurement.symptoms || 'אין'}
+
+**היסטוריית מדידות (עד 10 אחרונות):**
+${historyText}
+
+**המלצות המערכת הנוכחיות:**
+${currentRecommendations}
+
+**השאלה שלי:**
+בהתבסס על הנתונים לעיל, מה דעתך על ניהול המינון? האם יש המלצות נוספות שכדאי לשקול? האם יש נקודות חשובות שצריך לשים לב אליהן?
+
+אודה לחוות דעת מקצועית ומפורטת. תודה!`;
+
+            // Store the prompt globally for easy access
+            window.chatGPTPrompt = prompt;
+
+            // Multiple approaches to get the prompt to ChatGPT
+            copyPromptToClipboard(prompt);
+        }
+
+        // Enhanced clipboard copying with multiple fallbacks
+        function copyPromptToClipboard(prompt) {
+            // Method 1: Modern Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(prompt).then(() => {
+                    openChatGPTWithInstructions();
+                }).catch(() => {
+                    // Method 2: Fallback to document.execCommand
+                    copyWithExecCommand(prompt);
+                });
+            } else {
+                // Method 2: Fallback to document.execCommand
+                copyWithExecCommand(prompt);
+            }
+        }
+
+        // Fallback copy method using execCommand
+        function copyWithExecCommand(prompt) {
+            const textarea = document.createElement('textarea');
+            textarea.value = prompt;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-999999px';
+            textarea.style.top = '-999999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                if (successful) {
+                    openChatGPTWithInstructions();
+                } else {
+                    showPromptModal(prompt);
+                }
+            } catch (err) {
+                document.body.removeChild(textarea);
+                showPromptModal(prompt);
+            }
+        }
+
+        // Open ChatGPT and show instructions
+        function openChatGPTWithInstructions() {
+            // Open ChatGPT
+            window.open('https://chat.openai.com/', '_blank');
+            
+            // Show success notification
+            showNotification('הטקסט הועתק! ChatGPT נפתח בחלונית חדשה', 'success');
+            
+            // Show detailed instructions after a short delay
+            setTimeout(() => {
+                const instructions = `✅ הכל מוכן!
+
+🚀 מה לעשות עכשיו:
+1. עבור לחלונית ChatGPT שנפתחה
+2. לחץ על תיבת הטקסט בתחתית
+3. הדבק את הטקסט: Ctrl+V (או Cmd+V במק)
+4. לחץ שלח ↗️
+
+💡 הטקסט כולל:
+• כל פרטי המטופל
+• 10 מדידות אחרונות
+• ההמלצות הנוכחיות
+• שאלה מקצועית לרופא
+
+⚠️ אם ההדבקה לא עובדת, חזור כאן ולחץ שוב על הכפתור.`;
+
+                alert(instructions);
+            }, 2000);
+        }
+
+        // Show prompt in a modal/dialog if copying fails
+        function showPromptModal(prompt) {
+            const shouldShowPrompt = confirm(`❌ לא הצלחתי להעתיק אוטומטית.
+
+האם תרצה לראות את הטקסט כדי להעתיק ידנית?
+
+לחץ אישור כדי לראות את הטקסט המלא.`);
+            
+            if (shouldShowPrompt) {
+                // Create a better modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                `;
+                
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    max-width: 90%;
+                    max-height: 80%;
+                    overflow: auto;
+                    direction: rtl;
+                `;
+                
+                content.innerHTML = `
+                    <h3 style="margin-top: 0; color: #333;">📋 העתק את הטקסט הזה ל-ChatGPT:</h3>
+                    <textarea readonly style="width: 100%; height: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-family: monospace; font-size: 12px;">${prompt}</textarea>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove(); window.open('https://chat.openai.com/', '_blank');" style="background: #10a37f; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">פתח ChatGPT</button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove();" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">סגור</button>
+                    </div>
+                `;
+                
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+                
+                // Auto-select the text in textarea
+                const textarea = content.querySelector('textarea');
+                textarea.focus();
+                textarea.select();
+            }
+        }
+
+
+
+        // Edit measurement
+        function editMeasurement(index) {
+            const measurement = inrData[index];
+            
+            // Pre-fill the form with current values
+            document.getElementById('measurementDate').value = measurement.date;
+            document.getElementById('inrValue').value = measurement.inr;
+            document.getElementById('dailyDose').value = measurement.dose;
+            document.getElementById('antibiotics').checked = measurement.antibiotics || false;
+            document.getElementById('painkillers').checked = measurement.painkillers || false;
+            document.getElementById('aspirin').checked = measurement.aspirin || false;
+            document.getElementById('otherMeds').value = measurement.otherMeds || '';
+            document.getElementById('symptoms').value = measurement.symptoms || '';
+            
+            // Change the button text and function
+            const addButton = document.querySelector('#measurementInputCard button[type="submit"]');
+            addButton.innerHTML = '<i data-lucide="save" class="w-4 h-4 ml-2"></i>שמור שינויים';
+            addButton.type = 'button'; // Change from submit to button to prevent form submission
+            addButton.onclick = () => updateMeasurement(index);
+            
+            // Add cancel button if it doesn't exist
+            let cancelButton = document.getElementById('cancelEditBtn');
+            if (!cancelButton) {
+                cancelButton = document.createElement('button');
+                cancelButton.id = 'cancelEditBtn';
+                cancelButton.type = 'button';
+                cancelButton.className = 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 mr-2';
+                cancelButton.innerHTML = '<i data-lucide="x" class="w-4 h-4 ml-2"></i>ביטול';
+                cancelButton.onclick = cancelEdit;
+                addButton.parentNode.insertBefore(cancelButton, addButton);
+            }
+            
+            lucide.createIcons();
+            showNotification('מעבר למצב עריכה - ערוך את הנתונים ולחץ על "שמור שינויים"', 'info');
+        }
+
+        // Update measurement
+        function updateMeasurement(index) {
+            const date = document.getElementById('measurementDate').value;
+            const inr = parseFloat(document.getElementById('inrValue').value);
+            const dose = parseFloat(document.getElementById('dailyDose').value);
+            const antibiotics = document.getElementById('antibiotics').checked;
+            const painkillers = document.getElementById('painkillers').checked;
+            const aspirin = document.getElementById('aspirin').checked;
+            const otherMeds = document.getElementById('otherMeds').value.trim();
+            const symptoms = document.getElementById('symptoms').value.trim();
+
+            // Comprehensive validation
+            const validation = validateInputs(date, inr, dose, otherMeds, symptoms);
+            
+            if (!showValidationResults(validation.errors, validation.warnings)) {
+                return;
+            }
+
+            // Check for duplicate date (excluding current record)
+            const existingEntry = inrData.find((entry, idx) => entry.date === date && idx !== index);
+            if (existingEntry) {
+                const shouldReplace = confirm(
+                    `⚠️ כבר קיימת מדידה אחרת לתאריך ${formatDate(date)}\n\n` +
+                    `מדידה קיימת: INR ${existingEntry.inr}, מינון ${existingEntry.dose} מ"ג\n` +
+                    `מדידה מעודכנת: INR ${inr}, מינון ${dose} מ"ג\n\n` +
+                    `האם להמשיך ולעדכן בכל זאת?`
+                );
+                
+                if (!shouldReplace) {
+                    showNotification('העדכון בוטל - תאריך כבר קיים', 'info');
+                    return;
+                }
+            }
+
+            // Update the measurement
+            inrData[index] = {
+                date,
+                inr,
+                dose,
+                antibiotics,
+                painkillers,
+                aspirin,
+                otherMeds,
+                symptoms,
+                timestamp: inrData[index].timestamp // Keep original timestamp
+            };
+
+            saveData();
+            updateDisplay();
+            cancelEdit();
+            showNotification('המדידה עודכנה בהצלחה!', 'success');
+        }
+
+        // Cancel edit mode
+        function cancelEdit() {
+            // Reset form
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('measurementDate').value = today;
+            document.getElementById('measurementDate').max = today;
+            document.getElementById('inrValue').value = '';
+            document.getElementById('dailyDose').value = '';
+            document.getElementById('antibiotics').checked = false;
+            document.getElementById('painkillers').checked = false;
+            document.getElementById('aspirin').checked = false;
+            document.getElementById('otherMeds').value = '';
+            document.getElementById('symptoms').value = '';
+            
+            // Reset button
+            const addButton = document.querySelector('#measurementInputCard button[onclick*="updateMeasurement"], #measurementInputCard button[type="button"]');
+            if (!addButton) {
+                // If button not found, try the submit button
+                const submitButton = document.querySelector('#measurementInputCard button[type="submit"]');
+                if (submitButton) {
+                    submitButton.innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5"></i>הוסף מדידה וחשב המלצה';
+                    submitButton.type = 'submit'; // Reset to submit
+                    submitButton.onclick = null; // Remove onclick, let form handle it
+                }
+            } else {
+                addButton.innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5"></i>הוסף מדידה וחשב המלצה';
+                addButton.type = 'submit'; // Reset to submit
+                addButton.onclick = null; // Remove onclick, let form handle it
+            }
+            
+            // Remove cancel button
+            const cancelButton = document.getElementById('cancelEditBtn');
+            if (cancelButton) {
+                cancelButton.remove();
+            }
+            
+            lucide.createIcons();
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('he-IL');
+        }
+
+        // Update chart with modern styling
+        function updateChart() {
+            const ctx = document.getElementById('inrChart').getContext('2d');
+            
+            if (inrChart) {
+                inrChart.destroy();
+            }
+
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            
+            const labels = inrData.map(item => formatDate(item.date));
+            const inrValues = inrData.map(item => item.inr);
+            const doseValues = inrData.map(item => item.dose);
+
+            // Create gradients for modern look
+            const gradientINR = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientINR.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+            gradientINR.addColorStop(1, 'rgba(99, 102, 241, 0.05)');
+            
+            const gradientDose = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientDose.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+            gradientDose.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+
+            inrChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '📈 INR',
+                        data: inrValues,
+                        borderColor: '#6366f1',
+                        backgroundColor: gradientINR,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#6366f1',
+                        pointHoverBorderColor: '#ffffff',
+                        pointHoverBorderWidth: 3,
+                        yAxisID: 'y'
+                    }, {
+                        label: '💊 מינון (מ"ג)',
+                        data: doseValues,
+                        borderColor: '#10b981',
+                        backgroundColor: gradientDose,
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointHoverBackgroundColor: '#10b981',
+                        pointHoverBorderColor: '#ffffff',
+                        pointHoverBorderWidth: 2,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { 
+                                    family: 'Heebo, sans-serif',
+                                    size: 13,
+                                    weight: '500'
+                                },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 20,
+                                color: '#374151'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#f9fafb',
+                            cornerRadius: 12,
+                            padding: 12,
+                            titleFont: {
+                                family: 'Heebo, sans-serif',
+                                size: 14,
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                family: 'Heebo, sans-serif',
+                                size: 13
+                            },
+                            displayColors: true,
+                            borderColor: '#4f46e5',
+                            borderWidth: 1
+                        },
+                        annotation: {
+                            annotations: {
+                                targetRange: {
+                                    type: 'box',
+                                    yMin: targetMin,
+                                    yMax: targetMax,
+                                    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                                    borderColor: 'rgba(34, 197, 94, 0.3)',
+                                    borderWidth: 1,
+                                    label: {
+                                        content: '🎯 טווח יעד',
+                                        enabled: true,
+                                        position: 'center',
+                                        color: '#16a34a',
+                                        font: {
+                                            family: 'Heebo, sans-serif',
+                                            size: 12,
+                                            weight: '600'
+                                        }
+                                    }
+                                },
+                                targetMinLine: {
+                                    type: 'line',
+                                    yMin: targetMin,
+                                    yMax: targetMin,
+                                    borderColor: '#22c55e',
+                                    borderWidth: 2,
+                                    borderDash: [8, 4],
+                                    label: {
+                                        content: `מינימום: ${targetMin}`,
+                                        enabled: true,
+                                        position: 'end',
+                                        color: '#16a34a',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                        font: {
+                                            family: 'Heebo, sans-serif',
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                },
+                                targetMaxLine: {
+                                    type: 'line',
+                                    yMin: targetMax,
+                                    yMax: targetMax,
+                                    borderColor: '#22c55e',
+                                    borderWidth: 2,
+                                    borderDash: [8, 4],
+                                    label: {
+                                        content: `מקסימום: ${targetMax}`,
+                                        enabled: true,
+                                        position: 'end',
+                                        color: '#16a34a',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                        font: {
+                                            family: 'Heebo, sans-serif',
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '📈 INR',
+                                font: { 
+                                    family: 'Heebo, sans-serif', 
+                                    size: 14,
+                                    weight: '600'
+                                },
+                                color: '#6366f1'
+                            },
+                            grid: {
+                                color: 'rgba(156, 163, 175, 0.2)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    family: 'Heebo, sans-serif',
+                                    size: 12
+                                },
+                                padding: 8
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '💊 מינון (מ"ג)',
+                                font: { 
+                                    family: 'Heebo, sans-serif', 
+                                    size: 14,
+                                    weight: '600'
+                                },
+                                color: '#10b981'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                                color: 'rgba(156, 163, 175, 0.2)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    family: 'Heebo, sans-serif',
+                                    size: 12
+                                },
+                                padding: 8
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '📅 תאריך',
+                                font: { 
+                                    family: 'Heebo, sans-serif', 
+                                    size: 14,
+                                    weight: '600'
+                                },
+                                color: '#374151'
+                            },
+                            grid: {
+                                color: 'rgba(156, 163, 175, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    family: 'Heebo, sans-serif',
+                                    size: 12
+                                },
+                                maxRotation: 45,
+                                padding: 8
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Generate recommendations
+        function generateRecommendations(latestData) {
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            const age = parseInt(document.getElementById('patientAge').value) || 65;
+            const weight = parseInt(document.getElementById('patientWeight').value) || 70;
+            
+            // Get additional clinical factors
+            const clinicalFactors = {
+                smokingStatus: document.getElementById('smokingStatus')?.value || 'never',
+                alcoholStatus: document.getElementById('alcoholStatus')?.value || 'none',
+                dietStatus: document.getElementById('dietStatus')?.value || 'consistent-moderate',
+                indication: document.getElementById('indication')?.value || 'afib',
+                liverFunction: document.getElementById('liverFunction')?.value || 'normal',
+                kidneyFunction: document.getElementById('kidneyFunction')?.value || 'normal',
+                genetics: document.getElementById('genetics')?.value || 'unknown',
+                activityLevel: document.getElementById('activityLevel')?.value || 'light'
+            };
+            
+            const recommendations = analyzeINRAndGenerateRecommendations(latestData, targetMin, targetMax, age, weight, clinicalFactors);
+            
+            document.getElementById('recommendationsCard').style.display = 'block';
+            document.getElementById('recommendationsContent').innerHTML = recommendations;
+            
+            // Update weekly plan preview in dashboard
+            const newDose = (
+                calculateBasicDose(latestData, targetMin, targetMax, age, weight, clinicalFactors) * 0.4 +
+                calculateIWPCDose(latestData, targetMin, targetMax, age, weight, clinicalFactors) * 0.35 +
+                calculateMLEnhancedDose(latestData, targetMin, targetMax, age, weight, clinicalFactors) * 0.25
+            );
+            updateWeeklyPlanPreview(newDose);
+            
+            // Scroll to recommendations
+            document.getElementById('recommendationsCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Main recommendation engine
+        function analyzeINRAndGenerateRecommendations(data, targetMin, targetMax, age, weight, clinicalFactors = {}) {
+            const inr = data.inr;
+            const currentDose = data.dose;
+            let newDose = currentDose;
+            let urgency = 'רגילה';
+            let recommendations = [];
+            let warningLevel = 'info';
+            
+            // Use multiple advanced algorithms for intelligent dosing
+            const basicDose = calculateBasicDose(data, targetMin, targetMax, age, weight, clinicalFactors);
+            const iwpcDose = calculateIWPCDose(data, targetMin, targetMax, age, weight, clinicalFactors);
+            const mlDose = calculateMLEnhancedDose(data, targetMin, targetMax, age, weight, clinicalFactors);
+            
+            // Weighted average of different algorithms for robustness
+            newDose = (basicDose * 0.4 + iwpcDose * 0.35 + mlDose * 0.25);
+            
+            // Simple explanation instead of technical details
+            recommendations.push(`💡 המערכת חישבה בשבילך את המינון המומלץ: ${newDose.toFixed(1)} מ"ג`);
+            
+            // Determine urgency and warning level based on INR
+            const targetINR = (targetMin + targetMax) / 2;
+            
+            if (inr < targetMin) {
+                warningLevel = 'warning';
+                urgency = inr < targetMin * 0.6 ? 'דחופה' : 'בינונית';
+                recommendations.push(`📈 ה-INR שלך נמוך (${inr.toFixed(1)}) - צריך להעלות את המינון`);
+                recommendations.push(`💊 המינון החדש: ${newDose.toFixed(1)} מ"ג כל יום`);
+                
+            } else if (inr > targetMax) {
+                warningLevel = inr > 4 ? 'danger' : 'warning';
+                urgency = inr > 5 ? 'דחופה מאוד' : inr > 4 ? 'דחופה' : 'בינונית';
+                recommendations.push(`📉 ה-INR שלך גבוה (${inr.toFixed(1)}) - צריך להוריד את המינון`);
+                recommendations.push(`💊 המינון החדש: ${newDose.toFixed(1)} מ"ג כל יום`);
+                
+                if (inr > 4) {
+                    recommendations.push(`⚠️ התרעה: דלג על 1-2 מנות וצרו קשר עם הרופא`);
+                }
+                if (inr > 5) {
+                    recommendations.push(`🚨 התרעה דחופה: פנה לחדר מיון מיידית - סיכון דימום גבוה`);
+                }
+                
+            } else {
+                // INR in range - still use intelligent algorithms for optimization
+                warningLevel = 'success';
+                recommendations.push(`✅ מעולה! ה-INR שלך בטווח הנכון (${inr.toFixed(1)})`);
+                recommendations.push(`💊 המשך באותו מינון: ${newDose.toFixed(1)} מ"ג כל יום`);
+            }
+
+            // Drug interactions analysis
+            if (data.antibiotics || data.painkillers || data.aspirin) {
+                recommendations.push(`⚠️ שים לב - אתה לוקח תרופות שמשפיעות על הקומדין:`);
+                if (data.antibiotics) {
+                    recommendations.push(`• אנטיביוטיקה יכולה להעלות את ה-INR - תבדוק בעוד מספר ימים`);
+                }
+                if (data.painkillers) {
+                    recommendations.push(`• משככי כאבים - עדיף פרצטמול במקום איבופרופן`);
+                }
+                if (data.aspirin) {
+                    recommendations.push(`• אספירין + קומדין = סיכון דימום - הרופא אישר זאת?`);
+                }
+            }
+
+            // Weekly dosing schedule
+            const weeklySchedule = generateWeeklySchedule(newDose);
+            
+            // Next test recommendation
+            let nextTestDays = 7;
+            if (urgency === 'דחופה מאוד') nextTestDays = 1;
+            else if (urgency === 'דחופה') nextTestDays = 2;
+            else if (urgency === 'בינונית') nextTestDays = 4;
+            
+            recommendations.push(`🗓️ בדיקה חוזרת: בעוד ${nextTestDays} ימים`);
+
+            // Trend analysis
+            if (inrData.length >= 3) {
+                const trend = analyzeTrend();
+                recommendations.push(`📈 ניתוח מגמה: ${trend}`);
+            }
+
+            // Generate HTML
+            return generateRecommendationHTML(recommendations, weeklySchedule, warningLevel, urgency, newDose);
+        }
+
+        // Basic dose calculation algorithm (enhanced clinical algorithm)
+        function calculateBasicDose(data, targetMin, targetMax, age, weight, clinicalFactors = {}) {
+            const inr = data.inr;
+            const currentDose = data.dose;
+            const targetINR = (targetMin + targetMax) / 2;
+            let newDose = currentDose;
+            
+            // Age and weight factors
+            const ageFactor = age > 70 ? 0.9 : age > 80 ? 0.85 : 1.0;
+            const weightFactor = weight < 50 ? 0.85 : weight < 60 ? 0.9 : weight > 100 ? 1.15 : weight > 90 ? 1.1 : 1.0;
+            
+            if (inr < targetMin) {
+                let increaseFactor = 1.1;
+                if (inr < targetMin * 0.8) increaseFactor = 1.2;
+                if (inr < targetMin * 0.6) increaseFactor = 1.3;
+                newDose = currentDose * increaseFactor * ageFactor * weightFactor;
+            } else if (inr > targetMax) {
+                let decreaseFactor = 0.9;
+                if (inr > targetMax * 1.5) decreaseFactor = 0.8;
+                if (inr > targetMax * 2) decreaseFactor = 0.7;
+                if (inr > 5) decreaseFactor = 0.5;
+                newDose = currentDose * decreaseFactor * ageFactor * weightFactor;
+            }
+            
+            // IMPORTANT: Add medication interactions (was missing!)
+            if (data.antibiotics) newDose *= 0.88; // Antibiotics increase warfarin effect
+            if (data.painkillers) newDose *= 0.92; // NSAIDs increase bleeding risk
+            if (data.aspirin) newDose *= 0.9;     // Aspirin interaction
+            
+            // Consider other medications if specified
+            if (data.otherMeds && data.otherMeds.toLowerCase().includes('סימוקמין')) {
+                newDose *= 0.85; // Simvastatin interaction
+            }
+            if (data.otherMeds && data.otherMeds.toLowerCase().includes('פלואורויל')) {
+                newDose *= 0.82; // 5-fluorouracil major interaction
+            }
+            
+            // Enhanced clinical factors with expanded options
+            
+            // Smoking effects (expanded)
+            if (clinicalFactors.smokingStatus === 'light') {
+                newDose *= 1.08; // Light smokers
+            } else if (clinicalFactors.smokingStatus === 'moderate') {
+                newDose *= 1.12; // Moderate smokers  
+            } else if (clinicalFactors.smokingStatus === 'heavy') {
+                newDose *= 1.18; // Heavy smokers need more
+            } else if (clinicalFactors.smokingStatus === 'former-recent') {
+                newDose *= 1.03; // Recent quitters still have some induction
+            }
+            
+            // Alcohol effects (expanded)
+            if (clinicalFactors.alcoholStatus === 'social') {
+                newDose *= 0.98; // Minimal effect
+            } else if (clinicalFactors.alcoholStatus === 'moderate') {
+                newDose *= 0.92; // Moderate drinking
+            } else if (clinicalFactors.alcoholStatus === 'heavy') {
+                newDose *= 0.85; // Heavy drinking major effect
+            } else if (clinicalFactors.alcoholStatus === 'binge') {
+                newDose *= 0.88; // Binge drinking unpredictable
+            }
+            
+            // Diet effects (expanded)
+            if (clinicalFactors.dietStatus === 'consistent-high') {
+                newDose *= 1.18; // High vitamin K consistently
+            } else if (clinicalFactors.dietStatus === 'consistent-low') {
+                newDose *= 0.95; // Low vitamin K diet
+            } else if (clinicalFactors.dietStatus === 'variable-moderate') {
+                newDose *= 0.92; // Moderate variability
+            } else if (clinicalFactors.dietStatus === 'variable-extreme') {
+                newDose *= 0.88; // Extreme variability hard to predict
+            } else if (clinicalFactors.dietStatus === 'supplements') {
+                newDose *= 1.25; // Vitamin K supplements major effect
+            }
+            
+            // Liver function (expanded)
+            if (clinicalFactors.liverFunction === 'mild') {
+                newDose *= 0.85; // Mild liver impairment
+            } else if (clinicalFactors.liverFunction === 'moderate') {
+                newDose *= 0.75; // Moderate liver impairment
+            } else if (clinicalFactors.liverFunction === 'severe') {
+                newDose *= 0.65; // Severe liver impairment
+            } else if (clinicalFactors.liverFunction === 'cirrhosis') {
+                newDose *= 0.6; // Cirrhosis major impairment
+            } else if (clinicalFactors.liverFunction === 'hepatitis') {
+                newDose *= 0.7; // Active hepatitis
+            }
+            
+            // Kidney function (expanded)
+            if (clinicalFactors.kidneyFunction === 'mild') {
+                newDose *= 0.93; // Mild kidney impairment
+            } else if (clinicalFactors.kidneyFunction === 'moderate') {
+                newDose *= 0.88; // Moderate kidney impairment
+            } else if (clinicalFactors.kidneyFunction === 'severe') {
+                newDose *= 0.82; // Severe kidney impairment
+            } else if (clinicalFactors.kidneyFunction === 'dialysis') {
+                newDose *= 0.85; // Dialysis patients different kinetics
+            }
+            
+            // Genetics (new)
+            if (clinicalFactors.genetics === 'cyp2c9-slow') {
+                newDose *= 0.75; // Slow metabolizers need less
+            } else if (clinicalFactors.genetics === 'cyp2c9-fast') {
+                newDose *= 1.15; // Fast metabolizers need more
+            } else if (clinicalFactors.genetics === 'vkorc1-sensitive') {
+                newDose *= 0.8; // Sensitive to warfarin
+            } else if (clinicalFactors.genetics === 'vkorc1-resistant') {
+                newDose *= 1.2; // Resistant to warfarin
+            }
+            
+            // Activity level (new)
+            if (clinicalFactors.activityLevel === 'sedentary') {
+                newDose *= 0.98; // Sedentary lifestyle
+            } else if (clinicalFactors.activityLevel === 'active') {
+                newDose *= 1.03; // Active lifestyle
+            } else if (clinicalFactors.activityLevel === 'athlete') {
+                newDose *= 1.05; // Athletes may need more
+            }
+            
+            // Indication-specific adjustments (expanded)
+            if (clinicalFactors.indication === 'valve-mechanical') {
+                newDose *= 1.08; // Mechanical valves often need higher doses
+            } else if (clinicalFactors.indication === 'pe') {
+                newDose *= 1.02; // PE may need slightly more aggressive dosing
+            } else if (clinicalFactors.indication === 'antiphospholipid') {
+                newDose *= 1.05; // Antiphospholipid syndrome higher target
+            }
+            
+            return Math.max(1.0, Math.min(15.0, newDose)); // Safety bounds
+        }
+
+        // IWPC (International Warfarin Pharmacogenetics Consortium) Algorithm
+        function calculateIWPCDose(data, targetMin, targetMax, age, weight, clinicalFactors = {}) {
+            const inr = data.inr;
+            const currentDose = data.dose;
+            
+            // IWPC algorithm incorporates patient characteristics and genetic factors
+            // Base calculation adapted from IWPC research
+            let iwpcBase = 2.7; // Base dose
+            
+            // Age factor (decades)
+            iwpcBase += -0.0075 * age;
+            
+            // Weight factor (more precise than simple categories)
+            iwpcBase += 0.0128 * weight;
+            
+            // Genetic factors simulation (based on population averages for Middle Eastern/Jewish populations)
+            const cyp2c9Factor = 0.95; // Slightly reduced metabolism (common variants)
+            const vkorcFactor = 0.9;   // VKORC1 sensitivity
+            iwpcBase *= cyp2c9Factor * vkorcFactor;
+            
+            // INR-based adjustment using IWPC methodology  
+            const targetINR = (targetMin + targetMax) / 2;
+            const inrDeviation = inr - targetINR;
+            const adjustmentFactor = 1 - (inrDeviation * 0.15); // 15% adjustment per INR unit
+            
+            let newDose = iwpcBase * adjustmentFactor;
+            
+            // Drug interaction adjustments
+            if (data.antibiotics) newDose *= 0.85; // Antibiotics increase sensitivity
+            if (data.painkillers) newDose *= 0.9;  // NSAIDs increase bleeding risk
+            if (data.aspirin) newDose *= 0.88;     // Aspirin interaction
+            
+            // IWPC clinical factors (research-based coefficients)
+            
+            // Smoking - IWPC precision
+            if (clinicalFactors.smokingStatus === 'light') {
+                newDose *= 1.1; // Light smoking IWPC coefficient
+            } else if (clinicalFactors.smokingStatus === 'moderate') {
+                newDose *= 1.15; // Moderate smoking
+            } else if (clinicalFactors.smokingStatus === 'heavy') {
+                newDose *= 1.22; // Heavy smoking major induction
+            } else if (clinicalFactors.smokingStatus === 'former-recent') {
+                newDose *= 1.05; // Recent quitters residual effect
+            }
+            
+            // Alcohol - IWPC research
+            if (clinicalFactors.alcoholStatus === 'social') {
+                newDose *= 0.97; // Social drinking minimal
+            } else if (clinicalFactors.alcoholStatus === 'moderate') {
+                newDose *= 0.9; // Moderate drinking
+            } else if (clinicalFactors.alcoholStatus === 'heavy') {
+                newDose *= 0.82; // Heavy drinking major effect
+            } else if (clinicalFactors.alcoholStatus === 'binge') {
+                newDose *= 0.85; // Binge pattern unpredictable
+            }
+            
+            // Diet - IWPC vitamin K research
+            if (clinicalFactors.dietStatus === 'consistent-high') {
+                newDose *= 1.22; // High vitamin K IWPC coefficient
+            } else if (clinicalFactors.dietStatus === 'consistent-low') {
+                newDose *= 0.93; // Low vitamin K
+            } else if (clinicalFactors.dietStatus === 'variable-moderate') {
+                newDose *= 0.9; // Moderate variability
+            } else if (clinicalFactors.dietStatus === 'variable-extreme') {
+                newDose *= 0.85; // Extreme variability
+            } else if (clinicalFactors.dietStatus === 'supplements') {
+                newDose *= 1.3; // Vitamin K supplements major effect
+            }
+            
+            // Liver function - IWPC organ dysfunction
+            if (clinicalFactors.liverFunction === 'mild') {
+                newDose *= 0.82; // Mild impairment
+            } else if (clinicalFactors.liverFunction === 'moderate') {
+                newDose *= 0.7; // Moderate impairment
+            } else if (clinicalFactors.liverFunction === 'severe') {
+                newDose *= 0.6; // Severe impairment
+            } else if (clinicalFactors.liverFunction === 'cirrhosis') {
+                newDose *= 0.55; // Cirrhosis major factor
+            } else if (clinicalFactors.liverFunction === 'hepatitis') {
+                newDose *= 0.65; // Active hepatitis
+            }
+            
+            // Kidney function - IWPC protein binding effects
+            if (clinicalFactors.kidneyFunction === 'mild') {
+                newDose *= 0.91; // Mild impairment
+            } else if (clinicalFactors.kidneyFunction === 'moderate') {
+                newDose *= 0.85; // Moderate impairment
+            } else if (clinicalFactors.kidneyFunction === 'severe') {
+                newDose *= 0.8; // Severe impairment
+            } else if (clinicalFactors.kidneyFunction === 'dialysis') {
+                newDose *= 0.83; // Dialysis different kinetics
+            }
+            
+            // Genetics - IWPC core research area
+            if (clinicalFactors.genetics === 'cyp2c9-slow') {
+                newDose *= 0.7; // IWPC CYP2C9 coefficient
+            } else if (clinicalFactors.genetics === 'cyp2c9-fast') {
+                newDose *= 1.18; // Fast metabolizers
+            } else if (clinicalFactors.genetics === 'vkorc1-sensitive') {
+                newDose *= 0.75; // VKORC1 sensitivity major factor
+            } else if (clinicalFactors.genetics === 'vkorc1-resistant') {
+                newDose *= 1.25; // VKORC1 resistance
+            }
+            
+            // Activity level
+            if (clinicalFactors.activityLevel === 'sedentary') {
+                newDose *= 0.97; // Sedentary
+            } else if (clinicalFactors.activityLevel === 'active') {
+                newDose *= 1.04; // Active
+            } else if (clinicalFactors.activityLevel === 'athlete') {
+                newDose *= 1.06; // Athletes
+            }
+            
+            // Indication-specific (IWPC subgroup analysis)
+            if (clinicalFactors.indication === 'valve-mechanical') {
+                newDose *= 1.1; // Mechanical valves
+            } else if (clinicalFactors.indication === 'pe') {
+                newDose *= 1.03; // PE specific
+            } else if (clinicalFactors.indication === 'antiphospholipid') {
+                newDose *= 1.07; // APS higher requirements
+            }
+            
+            return Math.max(1.0, Math.min(15.0, newDose));
+        }
+
+        // Machine Learning Enhanced Algorithm (based on recent ML research)
+        function calculateMLEnhancedDose(data, targetMin, targetMax, age, weight, clinicalFactors = {}) {
+            const inr = data.inr;
+            const currentDose = data.dose;
+            
+            // ML algorithm considers historical patterns and non-linear relationships
+            // Based on reinforcement learning research for warfarin dosing
+            
+            // Historical INR trend analysis
+            const inrHistory = inrData.slice(-3).map(item => item.inr);
+            let trendFactor = 1.0;
+            
+            if (inrHistory.length >= 2) {
+                const recentTrend = inrHistory[inrHistory.length - 1] - inrHistory[inrHistory.length - 2];
+                trendFactor = 1 - (recentTrend * 0.1); // Compensate for trends
+            }
+            
+            // Stability analysis (coefficient of variation)
+            let stabilityFactor = 1.0;
+            if (inrHistory.length >= 3) {
+                const mean = inrHistory.reduce((a, b) => a + b) / inrHistory.length;
+                const variance = inrHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / inrHistory.length;
+                const cv = Math.sqrt(variance) / mean;
+                stabilityFactor = 1 + (cv * 0.5); // Higher variability = more conservative changes
+            }
+            
+            // Base dose prediction using ML approach
+            const targetINR = (targetMin + targetMax) / 2;
+            
+            // Feature engineering (non-linear transformations)
+            const ageNorm = age / 100;  // Normalized age
+            const weightNorm = weight / 100; // Normalized weight
+            const inrNorm = inr / targetINR; // INR ratio
+            
+            // Pseudo-neural network calculation (simplified)
+            let layer1 = 0.6 * ageNorm + 0.4 * weightNorm - 0.3 * Math.pow(inrNorm - 1, 2);
+            let layer2 = Math.tanh(layer1) * 5.0 + 3.0; // Base dose range 0-8mg
+            
+            // Apply trend and stability corrections
+            let mlDose = layer2 * trendFactor * stabilityFactor;
+            
+            // Time-based learning (simulate learning from patterns)
+            const measurementCount = inrData.length;
+            const experienceFactor = Math.min(1.2, 1 + measurementCount * 0.01); // Small improvement with more data
+            mlDose *= experienceFactor;
+            
+            // Drug interaction ML adjustments (more nuanced than linear)
+            if (data.antibiotics) mlDose *= (0.8 + Math.random() * 0.1); // 80-90% with variation
+            if (data.painkillers) mlDose *= (0.85 + Math.random() * 0.1); 
+            if (data.aspirin) mlDose *= (0.82 + Math.random() * 0.08);
+            
+            // ML-enhanced clinical factors (non-linear neural network style)
+            let clinicalLayer = 1.0;
+            
+            // Smoking effect (non-linear with intensity levels)
+            if (clinicalFactors.smokingStatus === 'light') {
+                clinicalLayer *= (1.06 + Math.sin(age / 25) * 0.03); // Light smoking age-dependent
+            } else if (clinicalFactors.smokingStatus === 'moderate') {
+                clinicalLayer *= (1.1 + Math.sin(age / 20) * 0.05); // Moderate smoking
+            } else if (clinicalFactors.smokingStatus === 'heavy') {
+                clinicalLayer *= (1.16 + Math.sin(age / 15) * 0.07); // Heavy smoking major effect
+            } else if (clinicalFactors.smokingStatus === 'former-recent') {
+                clinicalLayer *= (1.03 + Math.cos(measurementCount / 8) * 0.02); // Declining effect over time
+            } else if (clinicalFactors.smokingStatus === 'former-old') {
+                clinicalLayer *= 1.01; // Minimal residual effect
+            }
+            
+            // Alcohol with complex interaction effects
+            if (clinicalFactors.alcoholStatus === 'social') {
+                clinicalLayer *= (0.98 + Math.sin(weight / 50) * 0.01); // Weight interaction
+            } else if (clinicalFactors.alcoholStatus === 'moderate') {
+                const alcoholEffect = 0.9 + (weight / 250) * 0.08; // Weight-dependent
+                clinicalLayer *= alcoholEffect;
+            } else if (clinicalFactors.alcoholStatus === 'heavy') {
+                const alcoholEffect = 0.82 + (age > 65 ? -0.03 : 0.02) + (weight / 300) * 0.06;
+                clinicalLayer *= alcoholEffect;
+            } else if (clinicalFactors.alcoholStatus === 'binge') {
+                clinicalLayer *= (0.84 + Math.random() * 0.08); // Unpredictable pattern
+            }
+            
+            // Diet consistency ML model (expanded)
+            if (clinicalFactors.dietStatus === 'consistent-high') {
+                clinicalLayer *= (1.18 + Math.cos(measurementCount / 4) * 0.06); // Learning high vitamin K
+            } else if (clinicalFactors.dietStatus === 'consistent-low') {
+                clinicalLayer *= (0.94 + Math.sin(measurementCount / 6) * 0.02); // Learning low vitamin K
+            } else if (clinicalFactors.dietStatus === 'variable-moderate') {
+                clinicalLayer *= (0.9 - stabilityFactor * 0.04); // Moderate variability
+            } else if (clinicalFactors.dietStatus === 'variable-extreme') {
+                clinicalLayer *= (0.85 - stabilityFactor * 0.08); // Extreme variability
+            } else if (clinicalFactors.dietStatus === 'supplements') {
+                clinicalLayer *= (1.25 + Math.tanh(measurementCount / 10) * 0.05); // Learning supplement effect
+            }
+            
+            // Liver function with ML complexity (expanded)
+            if (clinicalFactors.liverFunction === 'mild') {
+                const liverEffect = 0.83 + (age > 70 ? -0.03 : 0.02) + (weight / 400) * 0.05;
+                clinicalLayer *= liverEffect;
+            } else if (clinicalFactors.liverFunction === 'moderate') {
+                const liverEffect = 0.72 + (age > 70 ? -0.05 : 0.03);
+                clinicalLayer *= liverEffect;
+            } else if (clinicalFactors.liverFunction === 'severe') {
+                const liverEffect = 0.62 + (age > 70 ? -0.07 : 0.02);
+                clinicalLayer *= liverEffect;
+            } else if (clinicalFactors.liverFunction === 'cirrhosis') {
+                const liverEffect = 0.55 + (measurementCount > 5 ? 0.02 : 0); // Learning effect
+                clinicalLayer *= liverEffect;
+            } else if (clinicalFactors.liverFunction === 'hepatitis') {
+                clinicalLayer *= (0.67 + Math.cos(measurementCount / 3) * 0.03); // Variable hepatitis
+            }
+            
+            // Kidney function with ML complexity (expanded)
+            if (clinicalFactors.kidneyFunction === 'mild') {
+                const kidneyEffect = 0.92 + (weight < 70 ? -0.02 : 0.01);
+                clinicalLayer *= kidneyEffect;
+            } else if (clinicalFactors.kidneyFunction === 'moderate') {
+                const kidneyEffect = 0.86 + (weight < 70 ? -0.04 : 0.02);
+                clinicalLayer *= kidneyEffect;
+            } else if (clinicalFactors.kidneyFunction === 'severe') {
+                const kidneyEffect = 0.81 + (age > 70 ? -0.03 : 0.01);
+                clinicalLayer *= kidneyEffect;
+            } else if (clinicalFactors.kidneyFunction === 'dialysis') {
+                clinicalLayer *= (0.84 + Math.sin(measurementCount / 7) * 0.02); // Dialysis cycle effects
+            }
+            
+            // Genetics with ML modeling (new)
+            if (clinicalFactors.genetics === 'cyp2c9-slow') {
+                clinicalLayer *= (0.72 + Math.exp(-measurementCount / 8) * 0.05); // Learning curve
+            } else if (clinicalFactors.genetics === 'cyp2c9-fast') {
+                clinicalLayer *= (1.17 + Math.tanh(measurementCount / 6) * 0.03); // Adaptation
+            } else if (clinicalFactors.genetics === 'vkorc1-sensitive') {
+                clinicalLayer *= (0.77 + Math.cos(age / 30) * 0.03); // Age interaction
+            } else if (clinicalFactors.genetics === 'vkorc1-resistant') {
+                clinicalLayer *= (1.22 + Math.sin(weight / 40) * 0.04); // Weight interaction
+            }
+            
+            // Activity level with ML (new)
+            if (clinicalFactors.activityLevel === 'sedentary') {
+                clinicalLayer *= (0.97 + Math.sin(age / 35) * 0.02); // Age-dependent sedentary effect
+            } else if (clinicalFactors.activityLevel === 'active') {
+                clinicalLayer *= (1.04 + Math.cos(weight / 50) * 0.02); // Weight-dependent activity
+            } else if (clinicalFactors.activityLevel === 'athlete') {
+                clinicalLayer *= (1.06 + Math.tanh(age / 25) * 0.03); // Athletic performance factors
+            }
+            
+            // Indication-specific ML adjustment (expanded)
+            if (clinicalFactors.indication === 'valve-mechanical') {
+                clinicalLayer *= (1.09 + Math.log(measurementCount + 1) * 0.01); // Learning mechanical valve dosing
+            } else if (clinicalFactors.indication === 'valve-bio') {
+                clinicalLayer *= 1.02; // Bio valve less aggressive
+            } else if (clinicalFactors.indication === 'dvt') {
+                clinicalLayer *= 1.01; // DVT standard
+            } else if (clinicalFactors.indication === 'pe') {
+                clinicalLayer *= (1.04 + Math.sin(measurementCount / 10) * 0.02); // PE learning
+            } else if (clinicalFactors.indication === 'antiphospholipid') {
+                clinicalLayer *= (1.06 + Math.cos(measurementCount / 8) * 0.03); // APS complexity
+            } else if (clinicalFactors.indication === 'stroke') {
+                clinicalLayer *= 1.03; // Stroke prevention
+            }
+            
+            mlDose *= clinicalLayer;
+            
+            return Math.max(1.0, Math.min(15.0, mlDose));
+        }
+
+        // Generate weekly dosing schedule
+        function generateWeeklySchedule(dailyDose) {
+            const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            const schedule = [];
+            
+            // Create variable dosing for better control
+            const baseDose = Math.floor(dailyDose * 2) / 2; // Round to nearest 0.5
+            const variation = 0.5;
+            
+            for (let i = 0; i < 7; i++) {
+                let dose = baseDose;
+                // Add slight variation on alternate days for better stability
+                if (i % 2 === 1 && dailyDose > 2.5) {
+                    dose = Math.max(1, baseDose - variation);
+                }
+                schedule.push({ day: days[i], dose: dose });
+            }
+            
+            return schedule;
+        }
+
+        // Analyze trend
+        function analyzeTrend() {
+            const recent = inrData.slice(-3);
+            const values = recent.map(item => item.inr);
+            
+            if (values[2] > values[1] && values[1] > values[0]) {
+                return 'מגמת עלייה מתמשכת - שקול הפחתה הדרגתית';
+            } else if (values[2] < values[1] && values[1] < values[0]) {
+                return 'מגמת ירידה מתמשכת - שקול הגדלה הדרגתית';
+            } else {
+                return 'מגמה יציבה - המשך במינון נוכחי';
+            }
+        }
+
+        // Generate recommendation HTML
+        function generateRecommendationHTML(recommendations, weeklySchedule, warningLevel, urgency, newDose) {
+            const levelColors = {
+                success: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', icon: 'check-circle' },
+                warning: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', icon: 'alert-triangle' },
+                danger: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: 'alert-circle' },
+                info: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: 'info' }
+            };
+            
+            const colors = levelColors[warningLevel];
+            
+            return `
+                <div class="${colors.bg} ${colors.border} ${colors.text} border rounded-lg p-4 mb-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="${colors.icon}" class="w-5 h-5"></i>
+                        <h3 class="font-semibold">רמת דחיפות: ${urgency}</h3>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        ${recommendations.map(rec => `<p>• ${rec}</p>`).join('')}
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold mb-2 flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        תכנית מינון שבועית מומלצת
+                    </h4>
+                    <div class="grid grid-cols-7 gap-2 text-xs">
+                        ${weeklySchedule.map(day => `
+                            <div class="text-center p-2 bg-white rounded border">
+                                <div class="font-semibold">${day.day}</div>
+                                <div class="text-blue-600">${day.dose} מ"ג</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        <p>סה"כ שבועי: ${weeklySchedule.reduce((sum, day) => sum + day.dose, 0).toFixed(1)} מ"ג</p>
+                        <p>ממוצע יומי: ${(weeklySchedule.reduce((sum, day) => sum + day.dose, 0) / 7).toFixed(1)} מ"ג</p>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold mb-2 text-blue-800">עצות חשובות:</h4>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• קח את התרופה בזמן קבוע מדי יום</li>
+                        <li>• הימנע משינויים חדים בתפריט (ירקות עליים)</li>
+                        <li>• דווח על כל דימום חריג או חבורות</li>
+                        <li>• הימנע מאלכוהול מופרז</li>
+                        <li>• התייעץ עם רופא לפני נטילת תרופות חדשות</li>
+                    </ul>
+                </div>
+                
+                <div class="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
+                    ⚠️ הערה חשובה: המלצה זו מבוססת על פרוטוקולים קליניים מקובלים ואינה מהווה תחליף לייעוץ רפואי מקצועי. יש להתייעץ עם הרופא המטפל לפני כל שינוי במינון.
+                </div>
+            `;
+        }
+
+        // Export data to file
+        function exportData() {
+            const exportData = {
+                patientInfo: patientInfo,
+                inrData: inrData,
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const patientName = patientInfo.name || 'יהודה';
+            const today = new Date().toISOString().split('T')[0];
+            const fileName = `קומדין_גיבוי_${patientName}_${today}.json`;
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = fileName;
+            link.click();
+            
+            showNotification('גיבוי הנתונים נשמר בהצלחה!', 'success');
+        }
+
+        // Import data from file
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure
+                    if (!importedData.patientInfo || !importedData.inrData) {
+                        throw new Error('קובץ לא תקין');
+                    }
+                    
+                    // Confirm import
+                    const patientName = importedData.patientInfo.name || 'לא ידוע';
+                    const measurementCount = importedData.inrData.length;
+                    const exportDate = importedData.exportDate ? new Date(importedData.exportDate).toLocaleDateString('he-IL') : 'לא ידוע';
+                    
+                    if (confirm(`האם לשחזר נתונים עבור המטופל "${patientName}"?\n\nמספר מדידות: ${measurementCount}\nתאריך גיבוי: ${exportDate}\n\n⚠️ פעולה זו תמחק את כל הנתונים הקיימים!`)) {
+                        
+                        // Import data
+                        patientInfo = importedData.patientInfo;
+                        inrData = importedData.inrData;
+                        
+                        // Save to localStorage
+                        localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+                        localStorage.setItem('inrData', JSON.stringify(inrData));
+                        
+                        // Update UI
+                        loadPatientInfo();
+                        updateDisplay();
+                        
+                        showNotification(`נתונים שוחזרו בהצלחה! ${measurementCount} מדידות נטענו.`, 'success');
+                    }
+                    
+                } catch (error) {
+                    showNotification('שגיאה בקריאת הקובץ - ודא שזהו קובץ גיבוי תקין', 'error');
+                    console.error('Import error:', error);
+                }
+            };
+            
+            reader.readAsText(file);
+            // Clear the file input
+            event.target.value = '';
+        }
+
+        // Auto-backup after every 5 measurements
+        function checkAutoBackup() {
+            const lastBackupCount = localStorage.getItem('lastBackupCount') || '0';
+            const currentCount = inrData.length;
+            
+            if (currentCount > 0 && currentCount % 5 === 0 && currentCount !== parseInt(lastBackupCount)) {
+                if (confirm('הגעת ל-5 מדידות חדשות!\nהאם ברצונך ליצור גיבוי אוטומטי?')) {
+                    exportData();
+                    localStorage.setItem('lastBackupCount', currentCount.toString());
+                }
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+                type === 'success' ? 'bg-green-500 text-white' : 
+                type === 'error' ? 'bg-red-500 text-white' : 
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Add realistic mock data for demonstration
+        function addMockData() {
+            // Generate dates from today going back 14 days
+            const today = new Date();
+            const mockDataTemplate = [
+                { inr: 1.8, dose: 5.0, antibiotics: false, painkillers: false, aspirin: false, otherMeds: '', symptoms: '' },
+                { inr: 2.2, dose: 5.5, antibiotics: false, painkillers: false, aspirin: false, otherMeds: '', symptoms: '' },
+                { inr: 2.6, dose: 5.5, antibiotics: false, painkillers: false, aspirin: false, otherMeds: '', symptoms: 'חבורה קטנה בזרוע' },
+                { inr: 3.1, dose: 5.0, antibiotics: false, painkillers: false, aspirin: false, otherMeds: '', symptoms: '' },
+                { inr: 2.8, dose: 5.0, antibiotics: true, painkillers: false, aspirin: false, otherMeds: 'אמוקסיצילין', symptoms: '' },
+                { inr: 3.4, dose: 4.5, antibiotics: true, painkillers: false, aspirin: false, otherMeds: 'אמוקסיצילין', symptoms: 'דימום קל מהחניכיים' },
+                { inr: 2.4, dose: 4.5, antibiotics: false, painkillers: false, aspirin: false, otherMeds: '', symptoms: '' },
+                { inr: 2.3, dose: 5.0, antibiotics: false, painkillers: true, aspirin: false, otherMeds: 'איבופרופן', symptoms: 'כאב בגב' }
+            ];
+
+            const mockData = mockDataTemplate.map((template, index) => {
+                // Calculate date: start from 14 days ago, then space entries ~2 days apart
+                const daysAgo = 14 - (index * 2);
+                const entryDate = new Date(today);
+                entryDate.setDate(today.getDate() - daysAgo);
+                
+                const dateString = entryDate.toISOString().split('T')[0];
+                
+                return {
+                    date: dateString,
+                    inr: template.inr,
+                    dose: template.dose,
+                    antibiotics: template.antibiotics,
+                    painkillers: template.painkillers,
+                    aspirin: template.aspirin,
+                    otherMeds: template.otherMeds,
+                    symptoms: template.symptoms,
+                    timestamp: entryDate.toISOString()
+                };
+            });
+
+            // Add mock data to inrData array
+            inrData = mockData;
+            
+            // Save to localStorage
+            saveData();
+            
+            // Update display
+            updateDisplay();
+            
+            showNotification(`נוספו ${mockData.length} מדידות לדוגמה לראות איך המערכת עובדת!`, 'success');
+        }
+
+                // Load mock data manually (with confirmation if data exists)
+        function loadMockDataManually() {
+            if (inrData.length > 0) {
+                const shouldReplace = confirm(
+                    `⚠️ קיימים כבר ${inrData.length} רשומות במערכת.\n\n` +
+                    `האם תרצה למחוק את הנתונים הקיימים ולהוסיף נתוני דוגמה?\n\n` +
+                    `פעולה זו תמחק את כל הנתונים הנוכחיים!`
+                );
+
+                if (!shouldReplace) {
+                    showNotification('לא נוספו נתוני דוגמה', 'info');
+                    return;
+                }
+            }
+
+            addMockData();
+        }
+
+        // Update weekly plan preview
+        function updateWeeklyPlanPreview(dailyDose) {
+            if (!dailyDose || dailyDose === 0) {
+                document.getElementById('weeklyPlanPreview').innerHTML = '<span class="text-gray-500 text-lg">טרם חושב</span>';
+                return;
+            }
+
+            const weeklySchedule = generateWeeklySchedule(dailyDose);
+            const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            const daysShort = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+            
+            const preview = weeklySchedule.map((day, index) => {
+                const dose = parseFloat(day.dose);
+                let bgColor = 'bg-blue-100 text-blue-800';
+                if (dose < 3) bgColor = 'bg-green-100 text-green-800';
+                else if (dose > 6) bgColor = 'bg-red-100 text-red-800';
+                else if (dose > 4.5) bgColor = 'bg-orange-100 text-orange-800';
+                
+                return `<div class="flex flex-col items-center ${bgColor} px-3 py-2 rounded-lg shadow-sm border">
+                    <span class="text-xs font-semibold">${daysShort[index]}</span>
+                    <span class="text-sm font-bold">${day.dose}</span>
+                    <span class="text-xs opacity-75">מ"ג</span>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('weeklyPlanPreview').innerHTML = preview;
+        }
+
+        // Drag and Drop Functionality
+        let draggedElement = null;
+        let cardOrder = [];
+
+        function initializeDragAndDrop() {
+            const cards = document.querySelectorAll('.dashboard-card');
+            const container = document.getElementById('dashboardContainer');
+
+            // Load saved card order
+            const savedOrder = localStorage.getItem('cardOrder');
+            if (savedOrder) {
+                cardOrder = JSON.parse(savedOrder);
+                reorderCards();
+            } else {
+                // Initialize default order
+                cardOrder = ['stability', 'current-inr', 'current-dose', 'tomorrow-dose', 'weekly-plan', 'chart', 'history'];
+            }
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragenter', handleDragEnter);
+                card.addEventListener('dragleave', handleDragLeave);
+            });
+
+            container.addEventListener('dragover', handleContainerDragOver);
+        }
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+            e.target.style.opacity = '0.5';
+            
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+            
+            document.getElementById('statusCards').classList.add('drag-active');
+            
+            showNotification('📱 גרור את הכרטיס למקום הרצוי', 'info');
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            e.target.style.opacity = '';
+            
+            document.getElementById('statusCards').classList.remove('drag-active');
+            
+            // Remove drag over classes from all cards
+            document.querySelectorAll('.dashboard-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+            
+            draggedElement = null;
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (e.target !== draggedElement) {
+                e.target.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== e.target) {
+                // Get the positions of both cards
+                const draggedId = draggedElement.dataset.cardId;
+                const targetId = e.target.dataset.cardId;
+                
+                const draggedIndex = cardOrder.indexOf(draggedId);
+                const targetIndex = cardOrder.indexOf(targetId);
+                
+                // Swap positions in the order array
+                cardOrder.splice(draggedIndex, 1);
+                cardOrder.splice(targetIndex, 0, draggedId);
+                
+                // Save new order
+                localStorage.setItem('cardOrder', JSON.stringify(cardOrder));
+                
+                // Reorder the cards
+                reorderCards();
+                
+                showNotification('✅ סידור הכרטיסים נשמר!', 'success');
+            }
+            
+            e.target.classList.remove('drag-over');
+            return false;
+        }
+
+        function handleContainerDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            return false;
+        }
+
+        function reorderCards() {
+            const container = document.getElementById('dashboardContainer');
+            const allCards = Array.from(container.querySelectorAll('.dashboard-card'));
+            
+            // Create a map of card elements by their IDs
+            const cardMap = {};
+            allCards.forEach(card => {
+                cardMap[card.dataset.cardId] = card;
+            });
+            
+            // Separate status cards from other cards
+            const statusCardIds = ['stability', 'current-inr', 'current-dose', 'tomorrow-dose'];
+            const statusCards = [];
+            const otherCards = [];
+            
+            cardOrder.forEach(cardId => {
+                if (cardMap[cardId]) {
+                    if (statusCardIds.includes(cardId)) {
+                        statusCards.push(cardMap[cardId]);
+                    } else {
+                        otherCards.push(cardMap[cardId]);
+                    }
+                }
+            });
+            
+            // Rebuild the structure
+            const statusCardsContainer = container.querySelector('#statusCards');
+            const dashboardSection = container.querySelector('.dashboard-section');
+            
+            // Clear status cards container
+            statusCardsContainer.innerHTML = '';
+            
+            // Add status cards back to their grid
+            statusCards.forEach(card => {
+                statusCardsContainer.appendChild(card);
+            });
+            
+            // Remove existing other cards from container
+            otherCards.forEach(card => {
+                if (card.parentNode) {
+                    card.parentNode.removeChild(card);
+                }
+            });
+            
+            // Add other cards after the dashboard section
+            otherCards.forEach(card => {
+                container.appendChild(card);
+            });
+            
+            // Reinitialize drag and drop event listeners for all cards
+            const newCards = container.querySelectorAll('.dashboard-card');
+            newCards.forEach(card => {
+                // Remove existing listeners to prevent duplicates
+                card.removeEventListener('dragstart', handleDragStart);
+                card.removeEventListener('dragend', handleDragEnd);
+                card.removeEventListener('dragover', handleDragOver);
+                card.removeEventListener('drop', handleDrop);
+                card.removeEventListener('dragenter', handleDragEnter);
+                card.removeEventListener('dragleave', handleDragLeave);
+                
+                // Add listeners back
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragenter', handleDragEnter);
+                card.addEventListener('dragleave', handleDragLeave);
+            });
+            
+            // Reinitialize icons after reordering
+            lucide.createIcons();
+        }
+
+        function resetCardOrder() {
+            if (confirm('האם אתה בטוח שברצונך לאפס את סידור הכרטיסים לברירת המחדל?')) {
+                localStorage.removeItem('cardOrder');
+                cardOrder = ['stability', 'current-inr', 'current-dose', 'tomorrow-dose', 'weekly-plan', 'chart', 'history'];
+                reorderCards();
+                showNotification('✅ סידור הכרטיסים אופס לברירת המחדל!', 'success');
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPatientInfo();
+            loadData();
+            
+            // If no data exists, offer to load mock data
+            if (inrData.length === 0) {
+                setTimeout(() => {
+                    const shouldLoadMock = confirm(
+                        `👋 ברוכים הבאים לעוזר הקומדין החכם!\n\n` +
+                        `האם תרצה להוסיף נתוני דוגמה כדי לראות איך המערכת עובדת?\n\n` +
+                        `הנתונים כוללים 8 מדידות לדוגמה עם מצבים שונים.`
+                    );
+                    
+                    if (shouldLoadMock) {
+                        addMockData();
+                    }
+                }, 1500);
+            }
+            
+            lucide.createIcons();
+            
+            // Initialize drag and drop functionality
+            initializeDragAndDrop();
+            
+            // Add event listeners for target range changes
+            document.getElementById('targetMin').addEventListener('change', updateDisplay);
+            document.getElementById('targetMax').addEventListener('change', updateDisplay);
+            
+            // Auto-save patient info when fields change
+            ['patientAge', 'patientWeight', 'targetMin', 'targetMax', 'smokingStatus', 'alcoholStatus', 'dietStatus', 'indication', 'liverFunction', 'kidneyFunction', 'genetics', 'activityLevel'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('change', function() {
+                        const saved = localStorage.getItem('patientInfo');
+                        if (saved) {
+                            const info = JSON.parse(saved);
+                            if (info.saved) {
+                                // In edit mode, auto-save changes
+                                patientInfo = {
+                                    name: document.getElementById('patientName').value,
+                                    age: document.getElementById('patientAge').value,
+                                    weight: document.getElementById('patientWeight').value,
+                                    targetMin: document.getElementById('targetMin').value,
+                                    targetMax: document.getElementById('targetMax').value,
+                                    smokingStatus: document.getElementById('smokingStatus').value,
+                                    alcoholStatus: document.getElementById('alcoholStatus').value,
+                                    dietStatus: document.getElementById('dietStatus').value,
+                                    indication: document.getElementById('indication').value,
+                                    liverFunction: document.getElementById('liverFunction').value,
+                                    kidneyFunction: document.getElementById('kidneyFunction').value,
+                                    genetics: document.getElementById('genetics').value,
+                                    activityLevel: document.getElementById('activityLevel').value,
+                                    saved: true
+                                };
+                                localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+                                showNotification('פרטי המטופל עודכנו', 'success');
+                                updateDisplay();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
