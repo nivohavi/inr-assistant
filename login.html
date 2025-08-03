@@ -14,6 +14,22 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Heebo', sans-serif; }
+        
+        /* Font Scale Classes */
+        .font-scale-small { font-size: 0.875rem; }
+        .font-scale-normal { font-size: 1rem; }
+        .font-scale-large { font-size: 1.125rem; }
+        .font-scale-xl { font-size: 1.25rem; }
+        .font-scale-xxl { font-size: 1.375rem; }
+        
+        .font-scale-small h1 { font-size: 1.5rem; }
+        .font-scale-normal h1 { font-size: 1.875rem; }
+        .font-scale-large h1 { font-size: 2rem; }
+        .font-scale-xl h1 { font-size: 2.25rem; }
+        .font-scale-xxl h1 { font-size: 2.5rem; }
+        
+        body { transition: font-size 0.3s ease-in-out; }
+        h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
@@ -30,8 +46,18 @@
         <p class="text-xs text-gray-500 mt-6">הנתונים שלך מאובטחים ונשמרים בחשבון הגוגל האישי שלך.</p>
     </div>
     <script>
-        // Initialize auth listener on login page
-        initAuth();
+        // Load saved font scale
+        function loadFontScale() {
+            const savedScale = localStorage.getItem('fontScale') || 'normal';
+            document.body.classList.remove('font-scale-small', 'font-scale-normal', 'font-scale-large', 'font-scale-xl', 'font-scale-xxl');
+            document.body.classList.add(`font-scale-${savedScale}`);
+        }
+        
+        // Initialize auth listener and load font scale on login page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFontScale();
+            initAuth();
+        });
     </script>
 </body>
 </html> 

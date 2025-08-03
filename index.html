@@ -26,6 +26,38 @@
         /* Smooth transitions for width changes */
         #mainContainer { transition: max-width 0.3s ease-in-out; }
         
+        /* Font Scale Classes */
+        .font-scale-small { font-size: 0.875rem; }     /* 14px base */
+        .font-scale-normal { font-size: 1rem; }        /* 16px base */
+        .font-scale-large { font-size: 1.125rem; }     /* 18px base */
+        .font-scale-xl { font-size: 1.25rem; }         /* 20px base */
+        .font-scale-xxl { font-size: 1.375rem; }       /* 22px base */
+        
+        /* Scale headings proportionally */
+        .font-scale-small h1 { font-size: 1.5rem; }
+        .font-scale-small h2 { font-size: 1.25rem; }
+        .font-scale-small h3 { font-size: 1.125rem; }
+        
+        .font-scale-normal h1 { font-size: 1.875rem; }
+        .font-scale-normal h2 { font-size: 1.5rem; }
+        .font-scale-normal h3 { font-size: 1.25rem; }
+        
+        .font-scale-large h1 { font-size: 2rem; }
+        .font-scale-large h2 { font-size: 1.625rem; }
+        .font-scale-large h3 { font-size: 1.375rem; }
+        
+        .font-scale-xl h1 { font-size: 2.25rem; }
+        .font-scale-xl h2 { font-size: 1.875rem; }
+        .font-scale-xl h3 { font-size: 1.5rem; }
+        
+        .font-scale-xxl h1 { font-size: 2.5rem; }
+        .font-scale-xxl h2 { font-size: 2rem; }
+        .font-scale-xxl h3 { font-size: 1.75rem; }
+        
+        /* Smooth transitions for font changes */
+        body { transition: font-size 0.3s ease-in-out; }
+        h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
+        
         /* Brand colors inspired by new logo */
         .brand-gradient { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%); }
         .brand-text-primary { color: #FF6B6B; }
@@ -172,8 +204,38 @@
                                 <a href="#" onclick="resetCardOrder(); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem"><i data-lucide="layout-grid" class="w-4 h-4 text-gray-500"></i>איפוס סידור כרטיסים</a>
                             </div>
                         </div>
-                    </div>
+                                            </div>
                     <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+
+                    <!-- Font Scale Control -->
+                    <div class="relative inline-block text-left">
+                        <div>
+                            <button type="button" onclick="toggleMenu('font-menu')" class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold transition duration-200" id="font-menu-button">
+                                <i data-lucide="type" class="w-4 h-4"></i>
+                                <span>גודל גופן</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+                            </button>
+                        </div>
+                        <div id="font-menu" class="hidden origin-top-right absolute right-0 mt-2 w-44 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                            <div class="py-1" role="none">
+                                <a href="#" onclick="setFontScale('small'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="minus" class="w-4 h-4 text-gray-500"></i>קטן (14px)
+                                </a>
+                                <a href="#" onclick="setFontScale('normal'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 bg-blue-50" role="menuitem">
+                                    <i data-lucide="type" class="w-4 h-4 text-gray-500"></i>רגיל (16px)
+                                </a>
+                                <a href="#" onclick="setFontScale('large'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="plus" class="w-4 h-4 text-gray-500"></i>גדול (18px)
+                                </a>
+                                <a href="#" onclick="setFontScale('xl'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="plus-circle" class="w-4 h-4 text-gray-500"></i>גדול מאוד (20px)
+                                </a>
+                                <a href="#" onclick="setFontScale('xxl'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                    <i data-lucide="maximize-2" class="w-4 h-4 text-gray-500"></i>ענק (22px)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
                                             <!-- Width Control -->
                         <div class="relative inline-block text-left">
@@ -1050,6 +1112,7 @@
         function closeAllMenus() {
             document.getElementById('actions-menu').classList.add('hidden');
             document.getElementById('user-menu').classList.add('hidden');
+            document.getElementById('font-menu').classList.add('hidden');
             document.getElementById('width-menu').classList.add('hidden');
         }
 
@@ -1057,6 +1120,7 @@
         window.addEventListener('click', function(e) {
             if (!document.getElementById('actions-menu-button').contains(e.target) && !document.getElementById('actions-menu').contains(e.target) &&
                 !document.getElementById('user-menu-button').contains(e.target) && !document.getElementById('user-menu').contains(e.target) &&
+                !document.getElementById('font-menu-button').contains(e.target) && !document.getElementById('font-menu').contains(e.target) &&
                 !document.getElementById('width-menu-button').contains(e.target) && !document.getElementById('width-menu').contains(e.target)) {
                 closeAllMenus();
             }
@@ -3791,10 +3855,85 @@ ${currentRecommendations}
             lucide.createIcons();
         }
 
-        // Initialize insights and load width preference on load
+        // Font Scale Control Functions
+        function setFontScale(scale) {
+            const body = document.body;
+            
+            // Remove all font scale classes
+            body.classList.remove('font-scale-small', 'font-scale-normal', 'font-scale-large', 'font-scale-xl', 'font-scale-xxl');
+            body.classList.add(`font-scale-${scale}`);
+            
+            // Update the button icon and text
+            const labels = {
+                small: { text: 'קטן', icon: 'minus', size: '14px' },
+                normal: { text: 'רגיל', icon: 'type', size: '16px' },
+                large: { text: 'גדול', icon: 'plus', size: '18px' },
+                xl: { text: 'גדול מאוד', icon: 'plus-circle', size: '20px' },
+                xxl: { text: 'ענק', icon: 'maximize-2', size: '22px' }
+            };
+            
+            const button = document.getElementById('font-menu-button');
+            const icon = button.querySelector('i[data-lucide]');
+            const span = button.querySelector('span');
+            
+            icon.setAttribute('data-lucide', labels[scale].icon);
+            span.textContent = `גופן ${labels[scale].text}`;
+            
+            // Save preference to localStorage
+            localStorage.setItem('fontScale', scale);
+            
+            // Re-render icons and show notification
+            lucide.createIcons();
+            showNotification(`גודל גופן שונה ל${labels[scale].text} (${labels[scale].size})`, 'success');
+            
+            // Update menu selection highlight
+            updateFontMenuSelection(scale);
+        }
+        
+        function updateFontMenuSelection(selectedScale) {
+            const menuItems = document.querySelectorAll('#font-menu a');
+            menuItems.forEach(item => {
+                item.classList.remove('bg-blue-50');
+                if (item.getAttribute('onclick').includes(`'${selectedScale}'`)) {
+                    item.classList.add('bg-blue-50');
+                }
+            });
+        }
+        
+        function loadFontScale() {
+            const savedScale = localStorage.getItem('fontScale') || 'normal';
+            
+            // Apply font scale without showing notification
+            const body = document.body;
+            body.classList.remove('font-scale-small', 'font-scale-normal', 'font-scale-large', 'font-scale-xl', 'font-scale-xxl');
+            body.classList.add(`font-scale-${savedScale}`);
+            
+            const labels = {
+                small: { text: 'קטן', icon: 'minus' },
+                normal: { text: 'רגיל', icon: 'type' },
+                large: { text: 'גדול', icon: 'plus' },
+                xl: { text: 'גדול מאוד', icon: 'plus-circle' },
+                xxl: { text: 'ענק', icon: 'maximize-2' }
+            };
+            
+            const button = document.getElementById('font-menu-button');
+            if (button) {
+                const icon = button.querySelector('i[data-lucide]');
+                const span = button.querySelector('span');
+                
+                icon.setAttribute('data-lucide', labels[savedScale].icon);
+                span.textContent = `גופן ${labels[savedScale].text}`;
+                
+                updateFontMenuSelection(savedScale);
+                lucide.createIcons();
+            }
+        }
+
+        // Initialize insights and load preferences on load
         document.addEventListener('DOMContentLoaded', function() {
             generateInsights();
             loadDashboardWidth();
+            loadFontScale();
         });
     </script>
 

@@ -17,6 +17,22 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Heebo', sans-serif; }
+        
+        /* Font Scale Classes */
+        .font-scale-small { font-size: 0.875rem; }
+        .font-scale-normal { font-size: 1rem; }
+        .font-scale-large { font-size: 1.125rem; }
+        .font-scale-xl { font-size: 1.25rem; }
+        .font-scale-xxl { font-size: 1.375rem; }
+        
+        .font-scale-small h1, .font-scale-small h2 { font-size: 1.25rem; }
+        .font-scale-normal h1, .font-scale-normal h2 { font-size: 1.5rem; }
+        .font-scale-large h1, .font-scale-large h2 { font-size: 1.75rem; }
+        .font-scale-xl h1, .font-scale-xl h2 { font-size: 2rem; }
+        .font-scale-xxl h1, .font-scale-xxl h2 { font-size: 2.25rem; }
+        
+        body { transition: font-size 0.3s ease-in-out; }
+        h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -71,7 +87,15 @@
     </main>
 
     <script>
+        // Load saved font scale
+        function loadFontScale() {
+            const savedScale = localStorage.getItem('fontScale') || 'normal';
+            document.body.classList.remove('font-scale-small', 'font-scale-normal', 'font-scale-large', 'font-scale-xl', 'font-scale-xxl');
+            document.body.classList.add(`font-scale-${savedScale}`);
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
+            loadFontScale();
             initAuth((user) => {
                 if (user) {
                     checkAdminStatus(user);
