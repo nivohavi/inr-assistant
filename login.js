@@ -1,13 +1,4 @@
-// Firebase configuration (to be filled in later)
-const firebaseConfig = {
-    apiKey: "AIzaSyCp3DToSo3XvEctGKU-7K-plIA--DYOMTw",
-    authDomain: "inr-assistant.firebaseapp.com",
-    projectId: "inr-assistant",
-    storageBucket: "inr-assistant.firebasestorage.app",
-    messagingSenderId: "774887287377",
-    appId: "1:774887287377:web:5439c34e139ebd4b272670",
-    measurementId: "G-MTETS4KKSF"
-  };
+// Firebase configuration loaded from config.js
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
