@@ -1,5 +1,5 @@
-# Config files with sensitive data
-config.js
+# Config files with sensitive data (uncomment if using GitHub Actions deployment)
+# config.js
 
 # Logs
 logs
