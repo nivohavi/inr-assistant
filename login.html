@@ -30,6 +30,39 @@
         
         body { transition: font-size 0.3s ease-in-out; }
         h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
+        
+        /* Mobile optimizations for login */
+        @media (max-width: 640px) {
+            .max-w-md {
+                max-width: calc(100vw - 2rem);
+                margin: 1rem;
+            }
+            
+            .p-8 {
+                padding: 1.5rem;
+            }
+            
+            button {
+                min-height: 48px;
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+            
+            h1 {
+                font-size: 1.75rem;
+            }
+            
+            p {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Touch-friendly enhancements */
+        @media (hover: none) and (pointer: coarse) {
+            button:active {
+                background-color: #1d4ed8;
+                transform: scale(0.98);
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">

@@ -33,6 +33,73 @@
         
         body { transition: font-size 0.3s ease-in-out; }
         h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
+        
+        /* Mobile optimizations for admin */
+        @media (max-width: 768px) {
+            /* Header improvements */
+            .w-full.mx-auto.py-4.px-4 .flex {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+            
+            .flex.items-center.gap-4 {
+                justify-content: center;
+            }
+            
+            .flex.items-center.gap-4 h1 {
+                font-size: 1.5rem;
+            }
+            
+            .flex.items-center.gap-4 a {
+                width: 100%;
+                justify-content: center;
+                margin-top: 0.5rem;
+            }
+            
+            /* Table improvements */
+            .hidden.md\\:block {
+                display: none !important;
+            }
+            
+            .md\\:hidden {
+                display: block !important;
+            }
+            
+            /* User cards for mobile */
+            .bg-white.rounded-lg.shadow.p-4.mb-4 {
+                padding: 1rem;
+            }
+            
+            /* Button improvements */
+            button {
+                min-height: 44px;
+                font-size: 16px; /* Prevent zoom on iOS */
+                padding: 0.75rem 1rem;
+            }
+            
+            /* Main content padding */
+            .w-full.mx-auto.py-6 {
+                padding-top: 1rem;
+                padding-bottom: 1rem;
+            }
+            
+            .px-4.py-6 {
+                padding: 1rem;
+            }
+        }
+        
+        /* Touch-friendly enhancements */
+        @media (hover: none) and (pointer: coarse) {
+            button:active {
+                transform: scale(0.98);
+                opacity: 0.8;
+            }
+            
+            button:hover {
+                background-color: initial;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">

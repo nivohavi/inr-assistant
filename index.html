@@ -58,6 +58,194 @@
         body { transition: font-size 0.3s ease-in-out; }
         h1, h2, h3, h4, h5, h6 { transition: font-size 0.3s ease-in-out; }
         
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            /* Improved header for mobile */
+            header .w-full > div {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            header .flex.items-center.justify-between {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+            }
+            
+            /* Logo and title section on mobile */
+            header .flex.items-center.gap-4 {
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Header buttons container */
+            header .flex.items-center.gap-6 {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                justify-content: center;
+            }
+            
+            /* Make header buttons more touch-friendly */
+            header button {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.75rem 1rem;
+            }
+            
+            /* Stack header buttons on mobile */
+            header .relative.inline-block.text-left {
+                flex: 1;
+                min-width: calc(50% - 0.25rem);
+            }
+            
+            header .relative.inline-block.text-left button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            /* Mobile navigation tabs */
+            .flex.space-x-6.border-b {
+                flex-direction: column;
+                space-x: 0;
+                gap: 0;
+            }
+            
+            .tab-button {
+                width: 100%;
+                text-align: center;
+                padding: 1rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            
+            /* Mobile dashboard layout */
+            #mainContainer .grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            /* Mobile form improvements */
+            .grid.grid-cols-2 {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            /* Better touch targets for inputs */
+            input, textarea, select, button {
+                min-height: 44px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            /* Mobile-friendly form buttons */
+            button[type="submit"] {
+                min-height: 48px;
+                font-size: 1.1rem;
+            }
+            
+            /* Mobile dropdown menus */
+            .origin-top-right.absolute {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                border-radius: 1rem 1rem 0 0;
+                max-height: 50vh;
+                overflow-y: auto;
+            }
+            
+            /* Larger touch targets for menu items */
+            [role="menuitem"] {
+                padding: 1rem 1.5rem;
+                font-size: 1rem;
+            }
+            
+            /* Mobile dashboard cards */
+            .dashboard-card {
+                min-height: auto;
+                padding: 1rem;
+            }
+            
+            /* Mobile chart container */
+            .chart-container {
+                height: 250px;
+            }
+            
+            /* Hide text labels on small buttons */
+            header button span {
+                display: none;
+            }
+            
+            /* Show only icons on mobile header */
+            header button i {
+                margin: 0;
+            }
+            
+            /* User menu special handling */
+            #user-menu-button span {
+                display: inline; /* Keep user name visible */
+            }
+            
+            /* Quick actions button larger on mobile */
+            .fixed.bottom-6.left-6 button {
+                width: 56px;
+                height: 56px;
+                padding: 1rem;
+            }
+            
+            /* Mobile table improvements */
+            table {
+                font-size: 0.875rem;
+            }
+            
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+        
+        /* Touch-friendly enhancements for all devices */
+        @media (hover: none) and (pointer: coarse) {
+            /* This targets touch devices */
+            button, [role="button"], [role="menuitem"] {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Remove hover effects on touch devices */
+            button:hover, [role="menuitem"]:hover {
+                background-color: initial;
+            }
+            
+            /* Add active states for better touch feedback */
+            button:active, [role="menuitem"]:active {
+                background-color: #e5e7eb;
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Improved mobile form layout */
+        @media (max-width: 640px) {
+            /* Full width forms on small screens */
+            .xl\\:col-span-1, .lg\\:col-span-1 {
+                order: 2; /* Forms go below dashboard on mobile */
+            }
+            
+            .xl\\:col-span-3, .lg\\:col-span-2 {
+                order: 1; /* Dashboard cards come first on mobile */
+            }
+            
+            /* Adjust padding for mobile */
+            .px-4, .sm\\:px-6, .lg\\:px-8 {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .py-8 {
+                padding-top: 1rem;
+                padding-bottom: 1rem;
+            }
+        }
+        
         /* Brand colors inspired by new logo */
         .brand-gradient { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%); }
         .brand-text-primary { color: #FF6B6B; }
@@ -134,7 +322,7 @@
             margin-bottom: 1.5rem;
         }
 
-        /* Responsive adjustments for weekly plan */
+        /* Mobile-first responsive adjustments */
         @media (max-width: 768px) {
             .dashboard-card[data-card-id="weekly-plan"] {
                 grid-column: span 1;
@@ -147,6 +335,56 @@
             #weeklyPlanPreview > div {
                 padding: 0.25rem 0.5rem !important;
                 font-size: 0.75rem !important;
+            }
+            
+            /* Improved mobile scrolling */
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Better mobile table */
+            table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            thead, tbody, th, td, tr {
+                display: block;
+            }
+            
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr {
+                border: 1px solid #ccc;
+                margin-bottom: 0.5rem;
+                padding: 0.5rem;
+                border-radius: 0.5rem;
+                background: white;
+            }
+            
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50% !important;
+                text-align: left;
+                white-space: normal;
+            }
+            
+            td:before {
+                content: attr(data-label) ": ";
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+                color: #666;
             }
         }
 
@@ -185,8 +423,12 @@
                         <h1 class="text-2xl font-bold text-gray-900">עוזר קומדין חכם</h1>
                         <p class="text-sm text-gray-600">INR Assistant</p>
                     </div>
+                    <!-- Mobile menu toggle -->
+                    <button id="mobile-menu-toggle" class="md:hidden ml-auto p-2 rounded-lg bg-gray-100 hover:bg-gray-200" onclick="toggleMobileMenu()">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
                 </div>
-                <div class="flex items-center gap-6">
+                <div class="flex items-center gap-6 md:flex hidden" id="desktop-nav">
                     <!-- Actions Dropdown -->
                     <div class="relative inline-block text-left">
                         <div>
@@ -282,6 +524,84 @@
                                     </a>
                                 </div>
                             </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile Navigation Menu -->
+                <div id="mobile-nav" class="hidden md:hidden bg-white border-t border-gray-200 px-4 py-4 space-y-3">
+                    <!-- Mobile Actions -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900">פעולות</h3>
+                        <button onclick="exportData(); closeMobileMenu();" class="w-full flex items-center gap-3 text-right px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                            <i data-lucide="download" class="w-4 h-4 text-gray-500"></i>
+                            גיבוי נתונים
+                        </button>
+                        <button onclick="document.getElementById('importFile').click(); closeMobileMenu();" class="w-full flex items-center gap-3 text-right px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                            <i data-lucide="upload" class="w-4 h-4 text-gray-500"></i>
+                            שחזור נתונים
+                        </button>
+                        <button onclick="loadMockDataManually(); closeMobileMenu();" class="w-full flex items-center gap-3 text-right px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                            <i data-lucide="database" class="w-4 h-4 text-gray-500"></i>
+                            נתוני דוגמה
+                        </button>
+                    </div>
+                    
+                    <!-- Mobile Font Scale -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900">גודל גופן</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="setFontScale('small'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                                <i data-lucide="minus" class="w-4 h-4"></i>
+                                קטן
+                            </button>
+                            <button onclick="setFontScale('normal'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm">
+                                <i data-lucide="type" class="w-4 h-4"></i>
+                                רגיל
+                            </button>
+                            <button onclick="setFontScale('large'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                גדול
+                            </button>
+                            <button onclick="setFontScale('xl'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                גדול מאוד
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Display Width -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-gray-900">רוחב תצוגה</h3>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setDashboardWidth('small'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                                <i data-lucide="smartphone" class="w-4 h-4"></i>
+                                צר
+                            </button>
+                            <button onclick="setDashboardWidth('medium'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                                <i data-lucide="tablet" class="w-4 h-4"></i>
+                                בינוני
+                            </button>
+                            <button onclick="setDashboardWidth('large'); closeMobileMenu();" class="flex items-center gap-2 justify-center px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm">
+                                <i data-lucide="monitor" class="w-4 h-4"></i>
+                                רחב
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile User Actions -->
+                    <div class="space-y-2 border-t border-gray-200 pt-3">
+                        <div class="flex items-center gap-3 px-4 py-2">
+                            <img id="mobileUserAvatar" class="h-8 w-8 rounded-full border-2 border-gray-200" src="INR_Logo_v1.png" alt="User avatar">
+                            <span id="mobileUserName" class="text-sm font-medium text-gray-800"></span>
+                        </div>
+                        <button onclick="window.location.href='admin.html'" id="mobileAdminLink" class="hidden w-full flex items-center gap-3 text-right px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm">
+                            <i data-lucide="shield" class="w-4 h-4 text-gray-500"></i>
+                            אזור מנהל
+                        </button>
+                        <button onclick="signOut()" class="w-full flex items-center gap-3 text-right px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg text-sm text-red-700">
+                            <i data-lucide="log-out" class="w-4 h-4 text-red-600"></i>
+                            התנתק
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1901,17 +2221,17 @@
                 
                 return `
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-3">${formatDate(item.date)}</td>
-                        <td class="px-4 py-3 font-semibold ${statusClass}">${item.inr.toFixed(1)}</td>
-                        <td class="px-4 py-3">${item.dose.toFixed(1)}</td>
-                        <td class="px-4 py-3 text-xs">${medsText}</td>
-                        <td class="px-4 py-3 text-xs ${statusClass}">${statusText}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3" data-label="תאריך">${formatDate(item.date)}</td>
+                        <td class="px-4 py-3 font-semibold ${statusClass}" data-label="INR">${item.inr.toFixed(1)}</td>
+                        <td class="px-4 py-3" data-label="מינון (מ"ג)">${item.dose.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-xs" data-label="תרופות נלוות">${medsText}</td>
+                        <td class="px-4 py-3 text-xs ${statusClass}" data-label="מצב">${statusText}</td>
+                        <td class="px-4 py-3" data-label="פעולות">
                             <div class="flex gap-2">
-                                <button onclick="editRecord(${inrData.length - 1 - index})" class="text-blue-600 hover:text-blue-800" title="עריכה">
+                                <button onclick="editRecord(${inrData.length - 1 - index})" class="text-blue-600 hover:text-blue-800 min-h-11 min-w-11 flex items-center justify-center" title="עריכה">
                                     <i data-lucide="edit" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="deleteMeasurement(${inrData.length - 1 - index})" class="text-red-600 hover:text-red-800" title="מחיקה">
+                                <button onclick="deleteMeasurement(${inrData.length - 1 - index})" class="text-red-600 hover:text-red-800 min-h-11 min-w-11 flex items-center justify-center" title="מחיקה">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -3478,6 +3798,9 @@ ${currentRecommendations}
                 if (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
                     document.getElementById('adminLink').classList.remove('hidden');
                 }
+                
+                // Update mobile user info
+                updateMobileUserInfo(user);
                 loadPatientInfo();
                 loadData();
                 initializeDragAndDrop();
@@ -3929,11 +4252,124 @@ ${currentRecommendations}
             }
         }
 
+        // Mobile Navigation Functions
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobile-nav');
+            const toggleButton = document.getElementById('mobile-menu-toggle');
+            const icon = toggleButton.querySelector('i');
+            
+            if (mobileNav.classList.contains('hidden')) {
+                mobileNav.classList.remove('hidden');
+                icon.setAttribute('data-lucide', 'x');
+            } else {
+                mobileNav.classList.add('hidden');
+                icon.setAttribute('data-lucide', 'menu');
+            }
+            lucide.createIcons();
+        }
+        
+        function closeMobileMenu() {
+            const mobileNav = document.getElementById('mobile-nav');
+            const toggleButton = document.getElementById('mobile-menu-toggle');
+            const icon = toggleButton.querySelector('i');
+            
+            mobileNav.classList.add('hidden');
+            icon.setAttribute('data-lucide', 'menu');
+            lucide.createIcons();
+        }
+        
+        // Update mobile menu when user info changes
+        function updateMobileUserInfo(user) {
+            const mobileUserName = document.getElementById('mobileUserName');
+            const mobileUserAvatar = document.getElementById('mobileUserAvatar');
+            const mobileAdminLink = document.getElementById('mobileAdminLink');
+            
+            if (user) {
+                if (mobileUserName) mobileUserName.textContent = user.displayName || 'משתמש';
+                if (mobileUserAvatar && user.photoURL) mobileUserAvatar.src = user.photoURL;
+                
+                // Check admin status for mobile menu
+                if (user.email === 'OhaviNiv@gmail.com' && mobileAdminLink) {
+                    mobileAdminLink.classList.remove('hidden');
+                }
+            }
+        }
+        
+        // Touch improvements
+        function addTouchFeedback() {
+            // Add touch feedback to all interactive elements
+            const interactiveElements = document.querySelectorAll('button, [role="button"], [role="menuitem"], input[type="submit"]');
+            
+            interactiveElements.forEach(element => {
+                element.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.98)';
+                    this.style.opacity = '0.8';
+                });
+                
+                element.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                    this.style.opacity = '';
+                });
+            });
+        }
+        
+        // Prevent zoom on input focus for iOS
+        function preventInputZoom() {
+            const inputs = document.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.type !== 'file') {
+                    // Ensure minimum font size to prevent zoom
+                    const currentFontSize = window.getComputedStyle(input).fontSize;
+                    if (parseFloat(currentFontSize) < 16) {
+                        input.style.fontSize = '16px';
+                    }
+                }
+            });
+        }
+        
+        // Handle orientation change
+        function handleOrientationChange() {
+            // Close mobile menu on orientation change
+            closeMobileMenu();
+            
+            // Recalculate chart dimensions
+            setTimeout(() => {
+                if (window.inrChart) {
+                    window.inrChart.resize();
+                }
+            }, 100);
+        }
+        
+        // Initialize mobile optimizations
+        function initMobileOptimizations() {
+            addTouchFeedback();
+            preventInputZoom();
+            
+            // Handle orientation change
+            window.addEventListener('orientationchange', handleOrientationChange);
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(e) {
+                const mobileNav = document.getElementById('mobile-nav');
+                const toggleButton = document.getElementById('mobile-menu-toggle');
+                
+                if (!mobileNav.contains(e.target) && !toggleButton.contains(e.target)) {
+                    closeMobileMenu();
+                }
+            });
+            
+            // Improve scrolling on mobile
+            if ('scrollBehavior' in document.documentElement.style) {
+                document.documentElement.style.scrollBehavior = 'smooth';
+            }
+        }
+
         // Initialize insights and load preferences on load
         document.addEventListener('DOMContentLoaded', function() {
             generateInsights();
             loadDashboardWidth();
             loadFontScale();
+            initMobileOptimizations();
         });
     </script>
 
