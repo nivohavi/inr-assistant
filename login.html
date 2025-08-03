@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>התחברות - עוזר קומדין חכם</title>
+    <link rel="icon" type="image/png" href="INR_Logo_v1.png">
+    <link rel="apple-touch-icon" href="INR_Logo_v1.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="login.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Heebo', sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 text-center">
+        <div class="flex justify-center mb-6">
+            <img src="INR_Logo_v1.png" alt="INR Assistant Logo" class="h-20 w-20">
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">עוזר קומדין חכם</h1>
+        <p class="text-gray-600 mb-8">התחבר כדי לנהל את נתוני ה-INR שלך</p>
+        <button onclick="googleSignIn()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-3">
+            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><path id="a" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></defs><clipPath id="b"><use xlink:href="#a" overflow="visible"/></clipPath><path clip-path="url(#b)" fill="#FBBC05" d="M0 37V11l17 13z"/><path clip-path="url(#b)" fill="#EA4335" d="M0 11l17 13 7-6.1L48 14V0H0z"/><path clip-path="url(#b)" fill="#34A853" d="M0 37l30-23.5 7.7 6.1L48 0v48H0z"/><path clip-path="url(#b)" fill="#4285F4" d="M48 48L17 24l-4-3 35-10z"/></svg>
+            התחבר עם גוגל
+        </button>
+        <p class="text-xs text-gray-500 mt-6">הנתונים שלך מאובטחים ונשמרים בחשבון הגוגל האישי שלך.</p>
+    </div>
+    <script>
+        // Initialize auth listener on login page
+        initAuth();
+    </script>
+</body>
+</html> 

@@ -4,12 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>עוזר קומדין חכם - ניהול מתקדם של INR</title>
+    <link rel="icon" type="image/png" href="INR_Logo_v1.png">
+    <link rel="apple-touch-icon" href="INR_Logo_v1.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script src="login.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Heebo', sans-serif; }
+        
+        /* Dashboard Width Classes */
+        .dashboard-width-small { max-width: 1024px; }  /* lg breakpoint */
+        .dashboard-width-medium { max-width: 1600px; } /* wider medium */
+        .dashboard-width-large { width: 100%; }        /* full width */
+        
+        /* Smooth transitions for width changes */
+        #mainContainer { transition: max-width 0.3s ease-in-out; }
+        
+        /* Brand colors inspired by new logo */
+        .brand-gradient { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%); }
+        .brand-text-primary { color: #FF6B6B; }
+        .brand-text-secondary { color: #45B7D1; }
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .chart-container { position: relative; height: 300px; }
@@ -125,38 +144,81 @@
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <!-- Header -->
     <header class="bg-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white p-3 rounded-xl">
-                        <i data-lucide="heart-pulse" class="w-8 h-8"></i>
-                    </div>
+                <div class="flex items-center gap-4">
+                    <img src="INR_Logo_v1.png" alt="INR Assistant Logo" class="h-12 w-12">
                     <div>
                         <h1 class="text-2xl font-bold text-gray-900">עוזר קומדין חכם</h1>
-                        <p class="text-sm text-gray-600">ניהול מתקדם של מינון קומדין לפי ערכי INR</p>
+                        <p class="text-sm text-gray-600">INR Assistant</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <button onclick="exportData()" class="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition duration-200">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        גיבוי נתונים
+                <div class="flex items-center gap-6">
+                    <!-- Actions Dropdown -->
+                    <div class="relative inline-block text-left">
+                        <div>
+                            <button type="button" onclick="toggleMenu('actions-menu')" class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold transition duration-200" id="actions-menu-button">
+                                <i data-lucide="settings-2" class="w-4 h-4"></i>
+                                <span>פעולות</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
                     </button>
-                    <button onclick="document.getElementById('importFile').click()" class="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition duration-200">
-                        <i data-lucide="upload" class="w-4 h-4"></i>
-                        שחזור נתונים
-                    </button>
-                    <button onclick="loadMockDataManually()" class="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition duration-200">
-                        <i data-lucide="database" class="w-4 h-4"></i>
-                        נתוני דוגמה
-                    </button>
-                    <button onclick="resetCardOrder()" class="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition duration-200" title="אפס סידור כרטיסים">
-                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
-                        סידור כרטיסים
-                    </button>
+                        </div>
+                        <div id="actions-menu" class="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                            <div class="py-1" role="none">
+                                <a href="#" onclick="exportData(); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem"><i data-lucide="download" class="w-4 h-4 text-gray-500"></i>גיבוי נתונים</a>
+                                <a href="#" onclick="document.getElementById('importFile').click(); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem"><i data-lucide="upload" class="w-4 h-4 text-gray-500"></i>שחזור נתונים</a>
+                                <a href="#" onclick="loadMockDataManually(); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem"><i data-lucide="database" class="w-4 h-4 text-gray-500"></i>נתוני דוגמה</a>
+                                <a href="#" onclick="resetCardOrder(); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem"><i data-lucide="layout-grid" class="w-4 h-4 text-gray-500"></i>איפוס סידור כרטיסים</a>
+                            </div>
+                        </div>
+                    </div>
                     <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-blue-600" id="patientCount">1</div>
-                        <div class="text-xs text-gray-500">מטופלים</div>
+
+                                            <!-- Width Control -->
+                        <div class="relative inline-block text-left">
+                            <div>
+                                <button type="button" onclick="toggleMenu('width-menu')" class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold transition duration-200" id="width-menu-button">
+                                    <i data-lucide="monitor" class="w-4 h-4"></i>
+                                    <span>שינוי תצוגה</span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+                    </button>
+                            </div>
+                            <div id="width-menu" class="hidden origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                                <div class="py-1" role="none">
+                                    <a href="#" onclick="setDashboardWidth('small'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                        <i data-lucide="smartphone" class="w-4 h-4 text-gray-500"></i>צר
+                                    </a>
+                                    <a href="#" onclick="setDashboardWidth('medium'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem">
+                                        <i data-lucide="tablet" class="w-4 h-4 text-gray-500"></i>בינוני
+                                    </a>
+                                    <a href="#" onclick="setDashboardWidth('large'); closeAllMenus();" class="flex items-center gap-3 text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100 bg-blue-50" role="menuitem">
+                                        <i data-lucide="monitor" class="w-4 h-4 text-gray-500"></i>רחב
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Menu Dropdown -->
+                        <div class="relative inline-block text-left">
+                            <div>
+                                 <button type="button" onclick="toggleMenu('user-menu')" class="flex items-center gap-2" id="user-menu-button">
+                                    <img id="userAvatar" class="h-9 w-9 rounded-full border-2 border-gray-200" src="INR_Logo_v1.png" alt="User avatar">
+                                    <span id="userName" class="text-sm font-medium text-gray-800"></span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-600"></i>
+                    </button>
+                            </div>
+                            <div id="user-menu" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                                <div class="py-1">
+                                    <a href="admin.html" id="adminLink" class="hidden flex items-center gap-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100">
+                                        <i data-lucide="shield" class="w-4 h-4 text-gray-500"></i>
+                                        <span>אזור מנהל</span>
+                                    </a>
+                                    <a href="#" onclick="signOut()" class="flex items-center gap-3 text-gray-700 px-4 py-2 text-sm hover:bg-gray-100">
+                                        <i data-lucide="log-out" class="w-4 h-4 text-gray-500"></i>
+                                        <span>התנתק</span>
+                                    </a>
+                                </div>
+                            </div>
                     </div>
                 </div>
             </div>
@@ -179,10 +241,10 @@
 
     <!-- Main Tab Content -->
     <div id="main-tab" class="tab-content active">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div id="mainContainer" class="dashboard-width-large mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 xl:grid-cols-4 lg:grid-cols-3 gap-8">
                 <!-- Left Column - Input Forms -->
-                <div class="lg:col-span-1 space-y-6">
+                <div class="xl:col-span-1 lg:col-span-1 space-y-6">
                     <!-- Data Input Card -->
                     <div class="bg-white rounded-xl shadow-lg p-6 fade-in" id="measurementInputCard">
                         <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -391,64 +453,114 @@
                 </div>
 
                 <!-- Right Column - Analysis & Results -->
-                <div class="lg:col-span-2 space-y-6" id="dashboardContainer">
+                <div class="xl:col-span-3 lg:col-span-2 space-y-6" id="dashboardContainer">
                     <!-- Current Status Overview -->
                     <div class="dashboard-section">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-stretch" id="statusCards">
-                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="stability">
-                                <div class="flex-1 flex flex-col items-center justify-center">
-                                    <div class="relative w-16 h-16 mb-3">
-                                        <svg class="w-16 h-16 transform -rotate-90">
-                                            <circle cx="32" cy="32" r="24" stroke="#e5e7eb" stroke-width="4" fill="none"/>
-                                            <circle cx="32" cy="32" r="24" stroke="#3b82f6" stroke-width="4" fill="none" class="stability-ring" style="--progress: 0"/>
-                                        </svg>
-                                        <div class="absolute inset-0 flex items-center justify-center">
-                                            <span class="text-xl font-bold text-blue-600" id="stabilityScore">--</span>
+                        <!-- Status Cards Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 lg:grid-cols-4 gap-6 mb-8">
+                            <!-- Current INR Card -->
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-blue-500 text-white p-2 rounded-lg">
+                                            <i data-lucide="activity" class="w-5 h-5"></i>
                                         </div>
+                                        <h3 class="text-sm font-semibold text-blue-900">INR נוכחי</h3>
                                     </div>
-                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">יציבות INR</h3>
-                                    <p class="text-sm text-gray-600" id="stabilityText">אין נתונים</p>
+                                    <div class="text-xs text-blue-600 bg-blue-200 px-2 py-1 rounded-full" id="inrTrend">--</div>
                                 </div>
-                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
-                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
-                                    גרור לסידור מחדש
-                                </div>
-                            </div>
-                            
-                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="current-inr">
-                                <div class="flex-1 flex flex-col items-center justify-center">
-                                    <div class="text-3xl font-bold text-green-600 mb-3" id="currentINR">--</div>
-                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">INR נוכחי</h3>
-                                    <p class="text-sm" id="inrStatus">אין מדידה אחרונה</p>
-                                </div>
-                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
-                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
-                                    גרור לסידור מחדש
+                                <div class="text-3xl font-bold text-blue-900 mb-1" id="currentINR">--</div>
+                                <div class="text-sm text-blue-700" id="currentDate">אין נתונים</div>
+                                <div class="mt-3 h-1 bg-blue-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500 transition-all duration-500" id="inrProgress" style="width: 0%"></div>
                                 </div>
                             </div>
                             
-                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="current-dose">
-                                <div class="flex-1 flex flex-col items-center justify-center">
-                                    <div class="text-3xl font-bold text-purple-600 mb-3" id="currentDose">--</div>
-                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">מינון נוכחי</h3>
-                                    <p class="text-sm text-gray-600">מ"ג יומי</p>
+                            <!-- Next Dose Card -->
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-green-500 text-white p-2 rounded-lg">
+                                            <i data-lucide="pill" class="w-5 h-5"></i>
                                 </div>
-                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
-                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
-                                    גרור לסידור מחדש
+                                        <h3 class="text-sm font-semibold text-green-900">מינון מחר</h3>
+                                    </div>
+                                    <div class="text-xs text-green-600" id="doseConfidence">--</div>
+                                </div>
+                                <div class="text-3xl font-bold text-green-900 mb-1" id="tomorrowDose">--</div>
+                                <div class="text-sm text-green-700" id="tomorrowDate">--</div>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <i data-lucide="clock" class="w-4 h-4 text-green-600"></i>
+                                    <span class="text-xs text-green-600" id="nextTestDate">בדיקה הבאה: --</span>
                                 </div>
                             </div>
                             
-                            <div class="dashboard-card bg-white rounded-xl shadow-lg p-6 text-center fade-in cursor-move" draggable="true" data-card-id="tomorrow-dose">
-                                <div class="flex-1 flex flex-col items-center justify-center">
-                                    <div class="text-3xl font-bold text-orange-600 mb-3" id="tomorrowDose">--</div>
-                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">💊 מינון מחר</h3>
-                                    <p class="text-xs text-gray-500" id="tomorrowDate">--</p>
+                            <!-- Target Range Card -->
+                            <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-purple-500 text-white p-2 rounded-lg">
+                                            <i data-lucide="target" class="w-5 h-5"></i>
                                 </div>
-                                <div class="drag-handle text-gray-400 text-center text-xs mt-auto pt-4">
-                                    <i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i>
-                                    גרור לסידור מחדש
+                                        <h3 class="text-sm font-semibold text-purple-900">טווח יעד</h3>
+                                    </div>
+                                    <div class="text-xs text-purple-600" id="targetStatus">--</div>
                                 </div>
+                                <div class="text-3xl font-bold text-purple-900 mb-1">
+                                    <span id="displayTargetMin">2.0</span>-<span id="displayTargetMax">3.0</span>
+                                </div>
+                                <div class="text-sm text-purple-700">יעד טיפולי</div>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <div class="flex-1 bg-purple-200 rounded-full h-2">
+                                        <div class="bg-purple-500 h-2 rounded-full transition-all duration-500" id="targetRangeIndicator" style="width: 50%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Statistics Card -->
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-orange-500 text-white p-2 rounded-lg">
+                                            <i data-lucide="trending-up" class="w-5 h-5"></i>
+                                </div>
+                                        <h3 class="text-sm font-semibold text-orange-900">סטטיסטיקה</h3>
+                                </div>
+                                    <div class="text-xs text-orange-600" id="stabilityScore">--</div>
+                                </div>
+                                <div class="text-3xl font-bold text-orange-900 mb-1" id="inRangePercent">--%</div>
+                                <div class="text-sm text-orange-700">בטווח היעד</div>
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                    <div class="text-center">
+                                        <div class="font-semibold text-orange-800" id="totalMeasurements">0</div>
+                                        <div class="text-orange-600">מדידות</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="font-semibold text-orange-800" id="daysSinceFirst">0</div>
+                                        <div class="text-orange-600">ימים</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Smart Insights Panel -->
+                        <div id="insightsPanel" class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-8 shadow-lg relative overflow-hidden">
+                            <!-- Subtle logo watermark -->
+                            <div class="absolute top-4 left-4 opacity-5">
+                                <img src="INR_Logo_v1.png" alt="" class="h-16 w-16">
+                            </div>
+                            <div class="flex items-center gap-3 mb-4 relative z-10">
+                                <div class="bg-indigo-500 text-white p-2 rounded-lg">
+                                    <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-indigo-900">תובנות חכמות</h3>
+                                <div class="flex-1"></div>
+                                <button onclick="toggleInsights()" class="text-indigo-600 hover:text-indigo-800">
+                                    <i data-lucide="chevron-up" class="w-5 h-5" id="insightsToggle"></i>
+                                </button>
+                            </div>
+                            <div id="insightsContent" class="space-y-3 relative z-10">
+                                <!-- Insights will be populated here -->
                             </div>
                         </div>
 
@@ -538,10 +650,15 @@
                                     </tr>
                                 </thead>
                                 <tbody id="dataTable">
-                                    <tr>
+                                    <tr id="inr-loader-row">
                                         <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-30"></i>
-                                            <p>אין נתונים להציג. הוסף מדידה ראשונה לתחילת המעקב.</p>
+                                            <div class="flex justify-center items-center gap-2">
+                                                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>טוען היסטוריית מדידות...</span>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -555,7 +672,7 @@
 
     <!-- Explanations Tab Content -->
     <div id="explanations-tab" class="tab-content">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="explanationsContainer" class="dashboard-width-large mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="bg-white rounded-xl shadow-lg p-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                     <i data-lucide="calculator" class="w-8 h-8 text-blue-600"></i>
@@ -915,6 +1032,34 @@
         let inrData = [];
         let patientInfo = {};
         let inrChart = null;
+        let currentUser = null;
+        let editingIndex = -1; // Track which record is being edited
+        const ADMIN_EMAIL = "OhaviNiv@gmail.com";
+
+        // --- Menu Management ---
+        function toggleMenu(menuId) {
+            const menu = document.getElementById(menuId);
+            const isHidden = menu.classList.contains('hidden');
+            closeAllMenus();
+            if (isHidden) {
+                menu.classList.remove('hidden');
+            }
+        }
+
+        function closeAllMenus() {
+            document.getElementById('actions-menu').classList.add('hidden');
+            document.getElementById('user-menu').classList.add('hidden');
+            document.getElementById('width-menu').classList.add('hidden');
+        }
+
+        // Close menus if clicking outside
+        window.addEventListener('click', function(e) {
+            if (!document.getElementById('actions-menu-button').contains(e.target) && !document.getElementById('actions-menu').contains(e.target) &&
+                !document.getElementById('user-menu-button').contains(e.target) && !document.getElementById('user-menu').contains(e.target) &&
+                !document.getElementById('width-menu-button').contains(e.target) && !document.getElementById('width-menu').contains(e.target)) {
+                closeAllMenus();
+            }
+        });
 
         // Tab switching function
         function switchTab(tabName) {
@@ -1008,10 +1153,17 @@
                 saved: true
             };
             
-            localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+            const db = firebase.firestore();
+            db.collection('users').doc(currentUser.uid).set({
+                patientInfo: patientInfo
+            }, { merge: true }).then(() => {
             showNotification('פרטי המטופל נשמרו בהצלחה!', 'success');
             setPatientEditMode();
             updateDisplay();
+            }).catch(error => {
+                console.error("Error saving patient info:", error);
+                showNotification('שגיאה בשמירת פרטי המטופל', 'error');
+            });
         }
 
         // Set patient to edit mode after saving
@@ -1035,9 +1187,10 @@
 
         // Load patient info
         function loadPatientInfo() {
-            const saved = localStorage.getItem('patientInfo');
-            if (saved) {
-                patientInfo = JSON.parse(saved);
+            const db = firebase.firestore();
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists && doc.data().patientInfo) {
+                    patientInfo = doc.data().patientInfo;
                 document.getElementById('patientName').value = patientInfo.name || 'יהודה';
                 document.getElementById('patientAge').value = patientInfo.age || '';
                 document.getElementById('patientWeight').value = patientInfo.weight || '';
@@ -1083,37 +1236,205 @@
                     setPatientEditMode();
                 }
             } else {
-                // Set defaults
-                document.getElementById('patientName').value = 'יהודה';
+                    // Set defaults for new user
+                    document.getElementById('patientName').value = currentUser.displayName || 'יהודה';
                 document.getElementById('targetMin').value = 2.0;
                 document.getElementById('targetMax').value = 3.0;
-            }
+                    // Store new user in Firestore
+                    db.collection('users').doc(currentUser.uid).set({
+                        displayName: currentUser.displayName,
+                        email: currentUser.email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                }
+            }).catch(error => {
+                console.error("Error loading patient info:", error);
+            });
         }
 
-        // Load data from localStorage
+        // Load data from firestore
         function loadData() {
-            const saved = localStorage.getItem('inrData');
-            if (saved) {
-                inrData = JSON.parse(saved);
+            showLoading('dataTable');
+            const db = firebase.firestore();
+            db.collection('inrData').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists && doc.data().measurements) {
+                    inrData = doc.data().measurements;
                 updateDisplay();
-            }
-            
+                } else {
+                     // If no data exists, offer to load mock data
+                    if (inrData.length === 0) {
+                        setTimeout(() => {
+                            const shouldLoadMock = confirm(
+                                `👋 ברוכים הבאים לעוזר הקומדין החכם!\n\n` +
+                                `האם תרצה להוסיף נתוני דוגמה כדי לראות איך המערכת עובדת?\n\n` +
+                                `הנתונים כוללים 8 מדידות לדוגמה עם מצבים שונים.`
+                            );
+                            
+                            if (shouldLoadMock) {
+                                addMockData();
+                            }
+                        }, 1500);
+                    }
+                }
             // Set today's date as default and max date
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('measurementDate').value = today;
             document.getElementById('measurementDate').max = today;
+                hideLoading('dataTable');
+            }).catch(error => {
+                console.error("Error loading INR data:", error);
+                hideLoading('dataTable');
+            });
         }
 
-        // Save data to localStorage
+        // Loading indicator functions
+        function showLoading(containerId) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                const loadingHtml = `
+                    <tr>
+                        <td colspan="6" class="text-center py-12">
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                <span class="text-gray-600">טוען נתונים...</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                container.innerHTML = loadingHtml;
+            }
+        }
+
+        function hideLoading(containerId) {
+            // Loading will be replaced by actual content when updateDisplay() is called
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('he-IL');
+        }
+
+        // Save data to firestore
         function saveData() {
-            localStorage.setItem('inrData', JSON.stringify(inrData));
+            const db = firebase.firestore();
+            db.collection('inrData').doc(currentUser.uid).set({
+                measurements: inrData
+            }).catch(error => {
+                console.error("Error saving INR data:", error);
+                showNotification('שגיאה בשמירת נתוני המדידה', 'error');
+            });
         }
 
         // Form submission handler
-        document.getElementById('dataForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            addMeasurement();
-        });
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const inrValue = parseFloat(document.getElementById('inrValue').value);
+            const date = document.getElementById('measurementDate').value;
+            const dose = parseFloat(document.getElementById('dailyDose').value);
+            const notes = document.getElementById('symptoms').value.trim();
+            
+            if (!date || isNaN(inrValue) || isNaN(dose)) {
+                showNotification('אנא מלא את כל השדות הנדרשים', 'error');
+                return;
+            }
+            
+            const measurement = {
+                date: date,
+                inr: inrValue,
+                dose: dose,
+                antibiotics: document.getElementById('antibiotics').checked,
+                painkillers: document.getElementById('painkillers').checked,
+                aspirin: document.getElementById('aspirin').checked,
+                otherMeds: document.getElementById('otherMeds').value.trim(),
+                symptoms: notes,
+                timestamp: new Date().toISOString()
+            };
+            
+            if (editingIndex >= 0) {
+                // Update existing record
+                inrData[editingIndex] = measurement;
+                showNotification('המדידה עודכנה בהצלחה!', 'success');
+                cancelEdit();
+            } else {
+                // Add new record
+                inrData.push(measurement);
+                showNotification('המדידה נוספה בהצלחה!', 'success');
+            }
+            
+            inrData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            saveData();
+            updateDisplay();
+            document.getElementById('inrForm').reset();
+            
+            // Reset date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('measurementDate').value = today;
+        }
+
+        // Edit an existing record
+        function editRecord(index) {
+            const record = inrData[index];
+            editingIndex = index;
+            
+            // Populate form with existing data
+            document.getElementById('measurementDate').value = record.date;
+            document.getElementById('inrValue').value = record.inr;
+            document.getElementById('dailyDose').value = record.dose;
+            document.getElementById('antibiotics').checked = record.antibiotics || false;
+            document.getElementById('painkillers').checked = record.painkillers || false;
+            document.getElementById('aspirin').checked = record.aspirin || false;
+            document.getElementById('otherMeds').value = record.otherMeds || '';
+            document.getElementById('symptoms').value = record.symptoms || '';
+            
+            // Update form appearance
+            const submitBtn = document.querySelector('#inrForm button[type="submit"]');
+            const formTitle = document.querySelector('#measurement-form h2');
+            
+            submitBtn.textContent = 'עדכן מדידה';
+            submitBtn.className = 'w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200';
+            formTitle.textContent = 'עריכת מדידה';
+            
+            // Show cancel button
+            let cancelBtn = document.getElementById('cancelEditBtn');
+            if (!cancelBtn) {
+                cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200';
+                cancelBtn.textContent = 'בטל עריכה';
+                cancelBtn.onclick = cancelEdit;
+                submitBtn.parentNode.insertBefore(cancelBtn, submitBtn.nextSibling);
+            }
+            
+            // Scroll to form
+            document.getElementById('measurement-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel editing
+        function cancelEdit() {
+            editingIndex = -1;
+            
+            // Reset form appearance
+            const submitBtn = document.querySelector('#inrForm button[type="submit"]');
+            const formTitle = document.querySelector('#measurement-form h2');
+            
+            submitBtn.textContent = 'הוסף מדידה';
+            submitBtn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200';
+            formTitle.textContent = 'הוספת מדידה חדשה';
+            
+            // Remove cancel button
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            if (cancelBtn) {
+                cancelBtn.remove();
+            }
+            
+            // Reset form
+            document.getElementById('inrForm').reset();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('measurementDate').value = today;
+        }
 
         // Comprehensive input validation
         function validateInputs(date, inr, dose, otherMeds, symptoms) {
@@ -1239,83 +1560,12 @@
             return true;
         }
 
-        // Add new measurement
-        function addMeasurement() {
-            const date = document.getElementById('measurementDate').value;
-            const inr = parseFloat(document.getElementById('inrValue').value);
-            const dose = parseFloat(document.getElementById('dailyDose').value);
-            const otherMeds = document.getElementById('otherMeds').value.trim();
-            const symptoms = document.getElementById('symptoms').value.trim();
-            
-            // Comprehensive validation
-            const validation = validateInputs(date, inr, dose, otherMeds, symptoms);
-            
-            if (!showValidationResults(validation.errors, validation.warnings)) {
-                return;
-            }
-
-            // Check for duplicate date
-            const existingEntry = inrData.find(entry => entry.date === date);
-            let isUpdate = false;
-            
-            if (existingEntry) {
-                const shouldReplace = confirm(
-                    `⚠️ כבר קיימת מדידה לתאריך ${formatDate(date)}\n\n` +
-                    `מדידה קיימת: INR ${existingEntry.inr}, מינון ${existingEntry.dose} מ"ג\n` +
-                    `מדידה חדשה: INR ${inr}, מינון ${dose} מ"ג\n\n` +
-                    `האם לעדכן את המדידה הקיימת?`
-                );
-                
-                if (!shouldReplace) {
-                    showNotification('המדידה לא נוספה - תאריך כבר קיים', 'info');
-                    return;
-                }
-                
-                // Remove existing entry
-                const index = inrData.findIndex(entry => entry.date === date);
-                inrData.splice(index, 1);
-                isUpdate = true;
-            }
-
-            const formData = {
-                date: date,
-                inr: inr,
-                dose: dose,
-                antibiotics: document.getElementById('antibiotics').checked,
-                painkillers: document.getElementById('painkillers').checked,
-                aspirin: document.getElementById('aspirin').checked,
-                otherMeds: document.getElementById('otherMeds').value.trim(),
-                symptoms: document.getElementById('symptoms').value.trim(),
-                timestamp: new Date().toISOString()
-            };
-
-            inrData.push(formData);
-            inrData.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            saveData();
-            updateDisplay();
-            generateRecommendations(formData);
-            checkAutoBackup();
-            
-            // Clear form
-            document.getElementById('dataForm').reset();
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('measurementDate').value = today;
-            document.getElementById('measurementDate').max = today;
-            
-            // Show appropriate success message
-            if (isUpdate) {
-                showNotification('המדידה עודכנה בהצלחה!', 'success');
-            } else {
-                showNotification('המדידה נוספה בהצלחה!', 'success');
-            }
-        }
-
         // Update all displays
         function updateDisplay() {
             updateStatusCards();
             updateDataTable();
             updateChart();
+            generateInsights();
         }
 
         // Update status cards
@@ -1323,32 +1573,136 @@
             const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
             const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
             
+            // Update target display
+            document.getElementById('displayTargetMin').textContent = targetMin.toFixed(1);
+            document.getElementById('displayTargetMax').textContent = targetMax.toFixed(1);
+            
             if (inrData.length === 0) {
-                // Reset tomorrow's dose when no data
+                // Reset all cards when no data
+                document.getElementById('currentINR').textContent = '--';
+                document.getElementById('currentDate').textContent = 'אין נתונים';
                 document.getElementById('tomorrowDose').textContent = '--';
-                document.getElementById('tomorrowDate').textContent = 'אין נתונים';
+                document.getElementById('tomorrowDate').textContent = '--';
+                document.getElementById('inRangePercent').textContent = '--%';
+                document.getElementById('totalMeasurements').textContent = '0';
+                document.getElementById('daysSinceFirst').textContent = '0';
+                document.getElementById('inrTrend').textContent = '--';
+                document.getElementById('doseConfidence').textContent = '--';
+                document.getElementById('targetStatus').textContent = '--';
+                document.getElementById('stabilityScore').textContent = '--';
+                document.getElementById('nextTestDate').textContent = 'בדיקה הבאה: --';
                 return;
             }
 
-            const latest = inrData[inrData.length - 1];
-            const stability = calculateStability(targetMin, targetMax);
+            const sortedData = [...inrData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const latestMeasurement = sortedData[sortedData.length - 1];
+            const currentINR = latestMeasurement.inr;
             
-            // Update stability score
-            document.getElementById('stabilityScore').textContent = Math.round(stability) + '%';
-            document.querySelector('.stability-ring').style.setProperty('--progress', stability);
-            document.getElementById('stabilityText').textContent = getStabilityText(stability);
+            // Update current INR card
+            document.getElementById('currentINR').textContent = currentINR.toFixed(1);
+            document.getElementById('currentDate').textContent = formatDate(latestMeasurement.date);
             
-            // Update current INR
-            document.getElementById('currentINR').textContent = latest.inr.toFixed(1);
-            document.getElementById('currentINR').className = getINRStatusClass(latest.inr, targetMin, targetMax) + ' text-3xl font-bold mb-2';
-            document.getElementById('inrStatus').textContent = getINRStatusText(latest.inr, targetMin, targetMax);
-            document.getElementById('inrStatus').className = 'text-sm ' + getINRStatusClass(latest.inr, targetMin, targetMax);
+            // Calculate INR trend
+            if (sortedData.length >= 2) {
+                const previousINR = sortedData[sortedData.length - 2].inr;
+                const trend = currentINR - previousINR;
+                let trendText = '';
+                let trendClass = '';
+                
+                if (Math.abs(trend) < 0.1) {
+                    trendText = 'יציב';
+                    trendClass = 'bg-gray-200 text-gray-700';
+                } else if (trend > 0) {
+                    trendText = `↗ +${trend.toFixed(1)}`;
+                    trendClass = 'bg-red-200 text-red-700';
+                } else {
+                    trendText = `↘ ${trend.toFixed(1)}`;
+                    trendClass = 'bg-blue-200 text-blue-700';
+                }
+                
+                const trendElement = document.getElementById('inrTrend');
+                trendElement.textContent = trendText;
+                trendElement.className = `text-xs px-2 py-1 rounded-full ${trendClass}`;
+            }
             
-            // Update current dose
-            document.getElementById('currentDose').textContent = latest.dose.toFixed(1);
+            // Update INR progress bar
+            const inrRange = targetMax - targetMin;
+            const inrPosition = Math.max(0, Math.min(100, ((currentINR - targetMin) / inrRange) * 100));
+            document.getElementById('inrProgress').style.width = `${inrPosition}%`;
             
-            // Update tomorrow's dose
-            updateTomorrowDose(latest, targetMin, targetMax);
+            // Calculate next dose (simple algorithm)
+            let nextDose = latestMeasurement.dose;
+            let confidence = 'נמוך';
+            
+            if (currentINR < targetMin) {
+                nextDose = latestMeasurement.dose * 1.1;
+                confidence = 'בינוני';
+            } else if (currentINR > targetMax) {
+                nextDose = latestMeasurement.dose * 0.9;
+                confidence = 'בינוני';
+            } else {
+                confidence = 'גבוה';
+            }
+            
+            document.getElementById('tomorrowDose').textContent = `${nextDose.toFixed(1)} מ"ג`;
+            document.getElementById('doseConfidence').textContent = confidence;
+            
+            // Calculate next test date (typically 1-4 weeks based on stability)
+            const daysSinceTest = Math.floor((new Date() - new Date(latestMeasurement.date)) / (1000 * 60 * 60 * 24));
+            let nextTestDays = 14; // Default 2 weeks
+            
+            if (currentINR < targetMin - 0.5 || currentINR > targetMax + 0.5) {
+                nextTestDays = 7; // 1 week if out of range
+            } else if (currentINR >= targetMin && currentINR <= targetMax) {
+                nextTestDays = 28; // 4 weeks if stable in range
+            }
+            
+            const nextTestDate = new Date();
+            nextTestDate.setDate(nextTestDate.getDate() + nextTestDays);
+            document.getElementById('nextTestDate').textContent = `בדיקה הבאה: ${formatDate(nextTestDate.toISOString().split('T')[0])}`;
+            
+            // Calculate statistics
+            const inRangeCount = sortedData.filter(m => m.inr >= targetMin && m.inr <= targetMax).length;
+            const inRangePercent = ((inRangeCount / sortedData.length) * 100).toFixed(0);
+            
+            document.getElementById('inRangePercent').textContent = `${inRangePercent}%`;
+            document.getElementById('totalMeasurements').textContent = sortedData.length.toString();
+            
+            // Calculate days since first measurement
+            const firstDate = new Date(sortedData[0].date);
+            const daysSinceFirst = Math.floor((new Date() - firstDate) / (1000 * 60 * 60 * 24));
+            document.getElementById('daysSinceFirst').textContent = daysSinceFirst.toString();
+            
+            // Calculate stability score (based on variance)
+            if (sortedData.length >= 3) {
+                const inrValues = sortedData.slice(-5).map(m => m.inr); // Last 5 measurements
+                const mean = inrValues.reduce((a, b) => a + b) / inrValues.length;
+                const variance = inrValues.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / inrValues.length;
+                const stability = Math.max(0, Math.min(100, 100 - (variance * 50)));
+                
+                document.getElementById('stabilityScore').textContent = `${stability.toFixed(0)}%`;
+            } else {
+                document.getElementById('stabilityScore').textContent = 'מעט נתונים';
+            }
+            
+            // Update target status
+            let targetStatus = '';
+            if (currentINR >= targetMin && currentINR <= targetMax) {
+                targetStatus = '✓ בטווח';
+                document.getElementById('targetStatus').className = 'text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full';
+            } else if (currentINR < targetMin) {
+                targetStatus = '↓ נמוך';
+                document.getElementById('targetStatus').className = 'text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full';
+            } else {
+                targetStatus = '↑ גבוה';
+                document.getElementById('targetStatus').className = 'text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full';
+            }
+            document.getElementById('targetStatus').textContent = targetStatus;
+            
+            // Update tomorrow's date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('tomorrowDate').textContent = formatDate(tomorrow.toISOString().split('T')[0]);
         }
 
         // Calculate stability percentage
@@ -1489,7 +1843,7 @@
                         <td class="px-4 py-3 text-xs ${statusClass}">${statusText}</td>
                         <td class="px-4 py-3">
                             <div class="flex gap-2">
-                                <button onclick="editMeasurement(${inrData.length - 1 - index})" class="text-blue-600 hover:text-blue-800" title="עריכה">
+                                <button onclick="editRecord(${inrData.length - 1 - index})" class="text-blue-600 hover:text-blue-800" title="עריכה">
                                     <i data-lucide="edit" class="w-4 h-4"></i>
                                 </button>
                                 <button onclick="deleteMeasurement(${inrData.length - 1 - index})" class="text-red-600 hover:text-red-800" title="מחיקה">
@@ -1750,142 +2104,6 @@ ${currentRecommendations}
                 textarea.focus();
                 textarea.select();
             }
-        }
-
-
-
-        // Edit measurement
-        function editMeasurement(index) {
-            const measurement = inrData[index];
-            
-            // Pre-fill the form with current values
-            document.getElementById('measurementDate').value = measurement.date;
-            document.getElementById('inrValue').value = measurement.inr;
-            document.getElementById('dailyDose').value = measurement.dose;
-            document.getElementById('antibiotics').checked = measurement.antibiotics || false;
-            document.getElementById('painkillers').checked = measurement.painkillers || false;
-            document.getElementById('aspirin').checked = measurement.aspirin || false;
-            document.getElementById('otherMeds').value = measurement.otherMeds || '';
-            document.getElementById('symptoms').value = measurement.symptoms || '';
-            
-            // Change the button text and function
-            const addButton = document.querySelector('#measurementInputCard button[type="submit"]');
-            addButton.innerHTML = '<i data-lucide="save" class="w-4 h-4 ml-2"></i>שמור שינויים';
-            addButton.type = 'button'; // Change from submit to button to prevent form submission
-            addButton.onclick = () => updateMeasurement(index);
-            
-            // Add cancel button if it doesn't exist
-            let cancelButton = document.getElementById('cancelEditBtn');
-            if (!cancelButton) {
-                cancelButton = document.createElement('button');
-                cancelButton.id = 'cancelEditBtn';
-                cancelButton.type = 'button';
-                cancelButton.className = 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 mr-2';
-                cancelButton.innerHTML = '<i data-lucide="x" class="w-4 h-4 ml-2"></i>ביטול';
-                cancelButton.onclick = cancelEdit;
-                addButton.parentNode.insertBefore(cancelButton, addButton);
-            }
-            
-            lucide.createIcons();
-            showNotification('מעבר למצב עריכה - ערוך את הנתונים ולחץ על "שמור שינויים"', 'info');
-        }
-
-        // Update measurement
-        function updateMeasurement(index) {
-            const date = document.getElementById('measurementDate').value;
-            const inr = parseFloat(document.getElementById('inrValue').value);
-            const dose = parseFloat(document.getElementById('dailyDose').value);
-            const antibiotics = document.getElementById('antibiotics').checked;
-            const painkillers = document.getElementById('painkillers').checked;
-            const aspirin = document.getElementById('aspirin').checked;
-            const otherMeds = document.getElementById('otherMeds').value.trim();
-            const symptoms = document.getElementById('symptoms').value.trim();
-
-            // Comprehensive validation
-            const validation = validateInputs(date, inr, dose, otherMeds, symptoms);
-            
-            if (!showValidationResults(validation.errors, validation.warnings)) {
-                return;
-            }
-
-            // Check for duplicate date (excluding current record)
-            const existingEntry = inrData.find((entry, idx) => entry.date === date && idx !== index);
-            if (existingEntry) {
-                const shouldReplace = confirm(
-                    `⚠️ כבר קיימת מדידה אחרת לתאריך ${formatDate(date)}\n\n` +
-                    `מדידה קיימת: INR ${existingEntry.inr}, מינון ${existingEntry.dose} מ"ג\n` +
-                    `מדידה מעודכנת: INR ${inr}, מינון ${dose} מ"ג\n\n` +
-                    `האם להמשיך ולעדכן בכל זאת?`
-                );
-                
-                if (!shouldReplace) {
-                    showNotification('העדכון בוטל - תאריך כבר קיים', 'info');
-                    return;
-                }
-            }
-
-            // Update the measurement
-            inrData[index] = {
-                date,
-                inr,
-                dose,
-                antibiotics,
-                painkillers,
-                aspirin,
-                otherMeds,
-                symptoms,
-                timestamp: inrData[index].timestamp // Keep original timestamp
-            };
-
-            saveData();
-            updateDisplay();
-            cancelEdit();
-            showNotification('המדידה עודכנה בהצלחה!', 'success');
-        }
-
-        // Cancel edit mode
-        function cancelEdit() {
-            // Reset form
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('measurementDate').value = today;
-            document.getElementById('measurementDate').max = today;
-            document.getElementById('inrValue').value = '';
-            document.getElementById('dailyDose').value = '';
-            document.getElementById('antibiotics').checked = false;
-            document.getElementById('painkillers').checked = false;
-            document.getElementById('aspirin').checked = false;
-            document.getElementById('otherMeds').value = '';
-            document.getElementById('symptoms').value = '';
-            
-            // Reset button
-            const addButton = document.querySelector('#measurementInputCard button[onclick*="updateMeasurement"], #measurementInputCard button[type="button"]');
-            if (!addButton) {
-                // If button not found, try the submit button
-                const submitButton = document.querySelector('#measurementInputCard button[type="submit"]');
-                if (submitButton) {
-                    submitButton.innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5"></i>הוסף מדידה וחשב המלצה';
-                    submitButton.type = 'submit'; // Reset to submit
-                    submitButton.onclick = null; // Remove onclick, let form handle it
-                }
-            } else {
-                addButton.innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5"></i>הוסף מדידה וחשב המלצה';
-                addButton.type = 'submit'; // Reset to submit
-                addButton.onclick = null; // Remove onclick, let form handle it
-            }
-            
-            // Remove cancel button
-            const cancelButton = document.getElementById('cancelEditBtn');
-            if (cancelButton) {
-                cancelButton.remove();
-            }
-            
-            lucide.createIcons();
-        }
-
-        // Format date for display
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('he-IL');
         }
 
         // Update chart with modern styling
@@ -3174,28 +3392,35 @@ ${currentRecommendations}
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            loadPatientInfo();
-            loadData();
-            
-            // If no data exists, offer to load mock data
-            if (inrData.length === 0) {
-                setTimeout(() => {
-                    const shouldLoadMock = confirm(
-                        `👋 ברוכים הבאים לעוזר הקומדין החכם!\n\n` +
-                        `האם תרצה להוסיף נתוני דוגמה כדי לראות איך המערכת עובדת?\n\n` +
-                        `הנתונים כוללים 8 מדידות לדוגמה עם מצבים שונים.`
-                    );
-                    
-                    if (shouldLoadMock) {
-                        addMockData();
-                    }
-                }, 1500);
-            }
-            
+            initAuth((user) => {
+                currentUser = user;
+                // Populate User Menu
+                document.getElementById('userName').textContent = user.displayName;
+                const avatarImg = document.getElementById('userAvatar');
+                
+                if (user.photoURL) {
+                    // Try to load Google avatar, fallback to PNG logo if it fails
+                    avatarImg.src = user.photoURL;
+                    avatarImg.onerror = function() {
+                        this.src = 'INR_Logo_v1.png';
+                        this.onerror = null; // Prevent infinite loop
+                    };
+                } else {
+                    // Use PNG logo as default avatar
+                    avatarImg.src = 'INR_Logo_v1.png';
+                }
+
+                if (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                    document.getElementById('adminLink').classList.remove('hidden');
+                }
+                loadPatientInfo();
+                loadData();
+                initializeDragAndDrop();
             lucide.createIcons();
+            });
             
-            // Initialize drag and drop functionality
-            initializeDragAndDrop();
+            // Add form event listener
+            document.getElementById('inrForm').addEventListener('submit', handleFormSubmit);
             
             // Add event listeners for target range changes
             document.getElementById('targetMin').addEventListener('change', updateDisplay);
@@ -3206,10 +3431,9 @@ ${currentRecommendations}
                 const element = document.getElementById(id);
                 if (element) {
                     element.addEventListener('change', function() {
-                        const saved = localStorage.getItem('patientInfo');
-                        if (saved) {
-                            const info = JSON.parse(saved);
-                            if (info.saved) {
+                        const db = firebase.firestore();
+                        db.collection('users').doc(currentUser.uid).get().then(doc => {
+                             if (doc.exists && doc.data().patientInfo && doc.data().patientInfo.saved) {
                                 // In edit mode, auto-save changes
                                 patientInfo = {
                                     name: document.getElementById('patientName').value,
@@ -3227,15 +3451,374 @@ ${currentRecommendations}
                                     activityLevel: document.getElementById('activityLevel').value,
                                     saved: true
                                 };
-                                localStorage.setItem('patientInfo', JSON.stringify(patientInfo));
+                                 db.collection('users').doc(currentUser.uid).set({ patientInfo: patientInfo }, { merge: true }).then(() => {
                                 showNotification('פרטי המטופל עודכנו', 'success');
                                 updateDisplay();
+                                }).catch(error => {
+                                     console.error("Error auto-saving patient info: ", error);
+                                });
                             }
-                        }
+                        });
                     });
                 }
             });
         });
+
+        // Smart Insights Functions
+        function generateInsights() {
+            const insightsContent = document.getElementById('insightsContent');
+            
+            if (inrData.length === 0) {
+                insightsContent.innerHTML = '<p class="text-indigo-700">הוסף מדידות כדי לקבל תובנות חכמות על מצבך.</p>';
+                return;
+            }
+
+            const sortedData = [...inrData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            const insights = [];
+
+            // Trend analysis
+            if (sortedData.length >= 3) {
+                const recent = sortedData.slice(-3);
+                const trend = recent[2].inr - recent[0].inr;
+                
+                if (Math.abs(trend) > 0.3) {
+                    const direction = trend > 0 ? 'עלייה' : 'ירידה';
+                    const color = trend > 0 ? 'text-red-700' : 'text-blue-700';
+                    const icon = trend > 0 ? 'trending-up' : 'trending-down';
+                    insights.push({
+                        type: 'trend',
+                        icon: icon,
+                        color: color,
+                        text: `זוהתה ${direction} משמעותית ב-INR בשלוש המדידות האחרונות (${Math.abs(trend).toFixed(1)} יחידות)`
+                    });
+                }
+            }
+
+            // Stability analysis
+            if (sortedData.length >= 5) {
+                const lastFive = sortedData.slice(-5);
+                const inRange = lastFive.filter(m => m.inr >= targetMin && m.inr <= targetMax).length;
+                
+                if (inRange >= 4) {
+                    insights.push({
+                        type: 'stability',
+                        icon: 'check-circle',
+                        color: 'text-green-700',
+                        text: `יציבות מצוינת! ${inRange} מתוך חמש המדידות האחרונות בטווח היעד`
+                    });
+                } else if (inRange <= 2) {
+                    insights.push({
+                        type: 'instability',
+                        icon: 'alert-triangle',
+                        color: 'text-orange-700',
+                        text: `יש לשפר יציבות - רק ${inRange} מתוך חמש המדידות האחרונות בטווח היעד`
+                    });
+                }
+            }
+
+            // Medication pattern analysis
+            const withMeds = sortedData.filter(m => m.antibiotics || m.painkillers || m.aspirin || m.otherMeds);
+            if (withMeds.length > 0) {
+                const avgWithMeds = withMeds.reduce((sum, m) => sum + m.inr, 0) / withMeds.length;
+                const avgWithoutMeds = sortedData.filter(m => !m.antibiotics && !m.painkillers && !m.aspirin && !m.otherMeds)
+                    .reduce((sum, m, _, arr) => sum + m.inr / arr.length, 0);
+                
+                if (Math.abs(avgWithMeds - avgWithoutMeds) > 0.3) {
+                    const effect = avgWithMeds > avgWithoutMeds ? 'מעלות' : 'מורידות';
+                    insights.push({
+                        type: 'medication',
+                        icon: 'pill',
+                        color: 'text-purple-700',
+                        text: `תרופות נוספות ${effect} את ה-INR בממוצע ב-${Math.abs(avgWithMeds - avgWithoutMeds).toFixed(1)} יחידות`
+                    });
+                }
+            }
+
+            // Time since last test
+            const daysSinceLastTest = Math.floor((new Date() - new Date(sortedData[sortedData.length - 1].date)) / (1000 * 60 * 60 * 24));
+            if (daysSinceLastTest > 30) {
+                insights.push({
+                    type: 'reminder',
+                    icon: 'clock',
+                    color: 'text-red-700',
+                    text: `עברו ${daysSinceLastTest} ימים מהבדיקה האחרונה. מומלץ לבדוק INR בקרוב`
+                });
+            }
+
+            // Render insights
+            if (insights.length === 0) {
+                insightsContent.innerHTML = '<p class="text-indigo-700">כל הנתונים נראים טובים! המשך במעקב סדיר.</p>';
+            } else {
+                insightsContent.innerHTML = insights.map(insight => `
+                    <div class="flex items-start gap-3 p-3 bg-white rounded-lg border border-indigo-100">
+                        <i data-lucide="${insight.icon}" class="w-5 h-5 ${insight.color} mt-0.5"></i>
+                        <p class="${insight.color} text-sm">${insight.text}</p>
+                    </div>
+                `).join('');
+            }
+            
+            lucide.createIcons();
+        }
+
+        function toggleInsights() {
+            const content = document.getElementById('insightsContent');
+            const toggle = document.getElementById('insightsToggle');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                toggle.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('hidden');
+                toggle.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Quick Actions Functions
+        function toggleQuickActions() {
+            const menu = document.getElementById('quickActionsMenu');
+            const icon = document.getElementById('quickActionIcon');
+            
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                icon.style.transform = 'rotate(45deg)';
+            } else {
+                closeQuickActions();
+            }
+        }
+
+        function closeQuickActions() {
+            const menu = document.getElementById('quickActionsMenu');
+            const icon = document.getElementById('quickActionIcon');
+            
+            menu.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+
+        function scrollToForm() {
+            document.getElementById('measurement-form').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+        // PDF Report Generation
+        function generateReport() {
+            if (inrData.length === 0) {
+                showNotification('אין נתונים ליצירת דוח', 'error');
+                return;
+            }
+            
+            showNotification('פיצ\'ר דוח PDF יתווסף בקרוב', 'info');
+        }
+
+        function generateReportContent() {
+            const sortedData = [...inrData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const targetMin = parseFloat(document.getElementById('targetMin').value) || 2.0;
+            const targetMax = parseFloat(document.getElementById('targetMax').value) || 3.0;
+            
+            const inRangeCount = sortedData.filter(m => m.inr >= targetMin && m.inr <= targetMax).length;
+            const inRangePercent = ((inRangeCount / sortedData.length) * 100).toFixed(1);
+            
+            const currentDate = new Date().toLocaleDateString('he-IL');
+            
+            return `
+                <div class="header">
+                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                        <img src="INR_Logo_v1.png" alt="INR Assistant Logo" style="height: 60px; width: 60px; margin-left: 15px;">
+                        <div>
+                            <h1>דוח מעקב INR</h1>
+                            <p style="color: #666; font-size: 14px;">עוזר קומדין חכם - INR Assistant</p>
+                        </div>
+                    </div>
+                    <p><strong>שם המטופל:</strong> ${patientInfo.name || 'לא צוין'}</p>
+                    <p><strong>תאריך הדוח:</strong> ${currentDate}</p>
+                    <p><strong>טווח יעד:</strong> ${targetMin.toFixed(1)} - ${targetMax.toFixed(1)}</p>
+                </div>
+
+                <div class="section">
+                    <h2>סיכום סטטיסטי</h2>
+                    <div class="summary">
+                        <p><strong>סה"כ מדידות:</strong> ${sortedData.length}</p>
+                        <p><strong>מדידות בטווח היעד:</strong> ${inRangeCount} (${inRangePercent}%)</p>
+                        <p><strong>INR אחרון:</strong> ${sortedData[sortedData.length - 1].inr.toFixed(1)} (${formatDate(sortedData[sortedData.length - 1].date)})</p>
+                        <p><strong>מינון אחרון:</strong> ${sortedData[sortedData.length - 1].dose.toFixed(1)} מ"ג</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>היסטוריית מדידות</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>תאריך</th>
+                                <th>INR</th>
+                                <th>מינון (מ"ג)</th>
+                                <th>סטטוס</th>
+                                <th>הערות</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sortedData.map(measurement => `
+                                <tr>
+                                    <td>${formatDate(measurement.date)}</td>
+                                    <td>${measurement.inr.toFixed(1)}</td>
+                                    <td>${measurement.dose.toFixed(1)}</td>
+                                    <td>${getINRStatusText(measurement.inr, targetMin, targetMax)}</td>
+                                    <td>${measurement.symptoms || 'אין'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Notification System Enhancement
+        function showAdvancedNotification(message, type = 'info', duration = 5000) {
+            const notification = document.createElement('div');
+            const icons = {
+                success: 'check-circle',
+                error: 'x-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+            
+            const colors = {
+                success: 'bg-green-500 border-green-600',
+                error: 'bg-red-500 border-red-600',
+                warning: 'bg-yellow-500 border-yellow-600',
+                info: 'bg-blue-500 border-blue-600'
+            };
+            
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${colors[type]} text-white border-l-4 transform translate-x-full transition-transform duration-300`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i data-lucide="${icons[type]}" class="w-5 h-5"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="mr-auto">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            lucide.createIcons();
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Auto remove
+            setTimeout(() => {
+                notification.style.transform = 'translateX(full)';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+                         // Dashboard Width Control
+        function setDashboardWidth(size) {
+            const mainContainer = document.getElementById('mainContainer');
+            const explanationsContainer = document.getElementById('explanationsContainer');
+            
+            // Remove all width classes from both containers
+            [mainContainer, explanationsContainer].forEach(container => {
+                if (container) {
+                    container.classList.remove('dashboard-width-small', 'dashboard-width-medium', 'dashboard-width-large');
+                    container.classList.add(`dashboard-width-${size}`);
+                }
+            });
+            
+            // Update the button icon
+            const labels = {
+                small: { text: 'צר', icon: 'smartphone' },
+                medium: { text: 'בינוני', icon: 'tablet' },
+                large: { text: 'רחב', icon: 'monitor' }
+            };
+            
+            const button = document.getElementById('width-menu-button');
+            const icon = button.querySelector('i[data-lucide]');
+            icon.setAttribute('data-lucide', labels[size].icon);
+            
+            // Save preference to localStorage
+            localStorage.setItem('dashboardWidth', size);
+            
+            // Re-render icons and show notification
+            lucide.createIcons();
+            showNotification(`תצוגה שונתה ל${labels[size].text}`, 'success');
+            
+            // Update menu selection highlight
+            updateWidthMenuSelection(size);
+        }
+        
+        function updateWidthMenuSelection(selectedSize) {
+            const menuItems = document.querySelectorAll('#width-menu a');
+            menuItems.forEach(item => {
+                item.classList.remove('bg-blue-50');
+                if (item.getAttribute('onclick').includes(`'${selectedSize}'`)) {
+                    item.classList.add('bg-blue-50');
+                }
+            });
+        }
+        
+        function loadDashboardWidth() {
+            const savedWidth = localStorage.getItem('dashboardWidth') || 'large';
+            // Load width without showing notification on initial load
+            const mainContainer = document.getElementById('mainContainer');
+            const explanationsContainer = document.getElementById('explanationsContainer');
+            
+            [mainContainer, explanationsContainer].forEach(container => {
+                if (container) {
+                    container.classList.remove('dashboard-width-small', 'dashboard-width-medium', 'dashboard-width-large');
+                    container.classList.add(`dashboard-width-${savedWidth}`);
+                }
+            });
+            
+            const labels = {
+                small: { icon: 'smartphone' },
+                medium: { icon: 'tablet' },
+                large: { icon: 'monitor' }
+            };
+            
+            const button = document.getElementById('width-menu-button');
+            const icon = button.querySelector('i[data-lucide]');
+            icon.setAttribute('data-lucide', labels[savedWidth].icon);
+            
+            updateWidthMenuSelection(savedWidth);
+            lucide.createIcons();
+        }
+
+        // Initialize insights and load width preference on load
+        document.addEventListener('DOMContentLoaded', function() {
+            generateInsights();
+            loadDashboardWidth();
+        });
     </script>
+
+    <!-- Quick Actions Floating Button -->
+    <div class="fixed bottom-6 left-6 z-40">
+        <div class="relative">
+            <button onclick="toggleQuickActions()" class="bg-gradient-to-br from-red-500 to-blue-600 hover:from-red-600 hover:to-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
+                <i data-lucide="plus" class="w-6 h-6" id="quickActionIcon"></i>
+            </button>
+            <div id="quickActionsMenu" class="hidden absolute bottom-16 left-0 bg-white rounded-lg shadow-xl border p-2 min-w-48">
+                <button onclick="scrollToForm(); closeQuickActions();" class="w-full text-right px-3 py-2 hover:bg-gray-100 rounded flex items-center gap-3">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-blue-600"></i>
+                    הוסף מדידה
+                </button>
+                <button onclick="exportData(); closeQuickActions();" class="w-full text-right px-3 py-2 hover:bg-gray-100 rounded flex items-center gap-3">
+                    <i data-lucide="download" class="w-4 h-4 text-green-600"></i>
+                    ייצא נתונים
+                </button>
+                <button onclick="generateReport(); closeQuickActions();" class="w-full text-right px-3 py-2 hover:bg-gray-100 rounded flex items-center gap-3">
+                    <i data-lucide="file-text" class="w-4 h-4 text-purple-600"></i>
+                    דוח לרופא
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול מערכת - עוזר קומדין חכם</title>
+    <link rel="icon" type="image/png" href="INR_Logo_v1.png">
+    <link rel="apple-touch-icon" href="INR_Logo_v1.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="login.js"></script>
+    <script src="admin.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Heebo', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow">
+        <div class="w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <img src="INR_Logo_v1.png" alt="INR Assistant Logo" class="h-10 w-10">
+                <div class="flex items-center gap-4">
+                    <h1 class="text-xl font-bold text-gray-900">אזור ניהול - עוזר קומדין חכם</h1>
+                    <a href="index.html" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition duration-200">
+                        <i data-lucide="arrow-right-to-line" class="w-4 h-4"></i>
+                        חזרה למערכת
+                    </a>
+                </div>
+            </div>
+            <div>
+                <span id="adminName" class="text-sm text-gray-700 mr-4"></span>
+                <button onclick="signOut()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    התנתק
+                </button>
+            </div>
+        </div>
+    </header>
+    <main class="w-full mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white shadow-xl rounded-lg p-6">
+                <h2 class="text-lg font-semibold mb-4">רשימת משתמשים</h2>
+                
+                <!-- Desktop Table View -->
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-right font-semibold">שם</th>
+                                <th class="px-4 py-3 text-right font-semibold">אימייל</th>
+                                <th class="px-4 py-3 text-right font-semibold">תאריך הרשמה</th>
+                                <th class="px-4 py-3 text-right font-semibold">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-list">
+                            <!-- User list will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mobile Card View -->
+                <div class="md:hidden" id="user-cards">
+                    <!-- User cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initAuth((user) => {
+                if (user) {
+                    checkAdminStatus(user);
+                }
+            });
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
