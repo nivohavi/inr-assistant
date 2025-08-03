@@ -608,23 +608,22 @@
         </div>
     </header>
 
-    <!-- Tab Navigation -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex space-x-6 border-b border-gray-200">
-            <button class="tab-button tab-active px-4 py-2 text-sm font-medium" onclick="switchTab('main')">
-                <i data-lucide="activity" class="w-4 h-4 inline ml-2"></i>
-                ניהול INR
-            </button>
-            <button class="tab-button px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchTab('explanations')">
-                <i data-lucide="book-open" class="w-4 h-4 inline ml-2"></i>
-                הסברים וחישובים
-            </button>
-        </div>
-    </div>
-
     <!-- Main Tab Content -->
     <div id="main-tab" class="tab-content active">
         <div id="mainContainer" class="dashboard-width-large mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Tab Navigation -->
+            <div class="mb-8">
+                <div class="flex space-x-6 border-b border-gray-200 justify-end">
+                    <button class="tab-button tab-active px-4 py-2 text-sm font-medium" onclick="switchTab('main')">
+                        <i data-lucide="activity" class="w-4 h-4 inline ml-2"></i>
+                        ניהול INR
+                    </button>
+                    <button class="tab-button px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchTab('explanations')">
+                        <i data-lucide="book-open" class="w-4 h-4 inline ml-2"></i>
+                        הסברים וחישובים
+                    </button>
+                </div>
+            </div>
             <div class="grid grid-cols-1 xl:grid-cols-4 lg:grid-cols-3 gap-8">
                 <!-- Left Column - Input Forms -->
                 <div class="xl:col-span-1 lg:col-span-1 space-y-6">
