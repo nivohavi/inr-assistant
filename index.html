@@ -1751,7 +1751,7 @@
             inrData.sort((a, b) => new Date(a.date) - new Date(b.date));
             saveData();
             updateDisplay();
-            document.getElementById('inrForm').reset();
+            document.getElementById('dataForm').reset();
             
             // Reset date to today
             const today = new Date().toISOString().split('T')[0];
@@ -1816,7 +1816,7 @@
             }
             
             // Reset form
-            document.getElementById('inrForm').reset();
+            document.getElementById('dataForm').reset();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('measurementDate').value = today;
         }
@@ -3808,7 +3808,7 @@ ${currentRecommendations}
             });
             
             // Add form event listener
-            document.getElementById('inrForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('dataForm').addEventListener('submit', handleFormSubmit);
             
             // Add event listeners for target range changes
             document.getElementById('targetMin').addEventListener('change', updateDisplay);
