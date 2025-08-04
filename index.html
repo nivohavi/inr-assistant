@@ -2032,6 +2032,9 @@
             document.getElementById('tomorrowDose').textContent = `${nextDose.toFixed(1)} מ"ג`;
             document.getElementById('doseConfidence').textContent = confidence;
             
+            // Update weekly plan preview with calculated dose
+            updateWeeklyPlanPreview(nextDose);
+            
             // Calculate next test date (typically 1-4 weeks based on stability)
             const daysSinceTest = Math.floor((new Date() - new Date(latestMeasurement.date)) / (1000 * 60 * 60 * 24));
             let nextTestDays = 14; // Default 2 weeks
