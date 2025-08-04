@@ -954,7 +954,7 @@
                                     <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center justify-center gap-2">
                                         📅 תוכנית מינונים שבועית
                                     </h3>
-                                    <div id="weeklyPlanPreview" class="flex justify-between gap-2 w-full">
+                                    <div id="weeklyPlanPreview" class="flex justify-between gap-1 w-full">
                                         <span class="text-gray-500">טרם חושב</span>
                                     </div>
                                 </div>
@@ -3298,13 +3298,33 @@ ${currentRecommendations}
             const baseDose = Math.floor(dailyDose * 2) / 2; // Round to nearest 0.5
             const variation = 0.5;
             
+            // Start from tomorrow
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() + 1);
+            
             for (let i = 0; i < 7; i++) {
                 let dose = baseDose;
                 // Add slight variation on alternate days for better stability
                 if (i % 2 === 1 && dailyDose > 2.5) {
                     dose = Math.max(1, baseDose - variation);
                 }
-                schedule.push({ day: days[i], dose: dose });
+                
+                // Calculate the actual date for this day
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dayName = days[currentDate.getDay()];
+                const dateStr = currentDate.toLocaleDateString('he-IL', { 
+                    day: 'numeric', 
+                    month: 'numeric' 
+                });
+                
+                schedule.push({ 
+                    day: dayName, 
+                    date: dateStr,
+                    fullDate: currentDate,
+                    dose: dose 
+                });
             }
             
             return schedule;
@@ -3563,8 +3583,6 @@ ${currentRecommendations}
             }
 
             const weeklySchedule = generateWeeklySchedule(dailyDose);
-            const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-            const daysShort = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
             
             const preview = weeklySchedule.map((day, index) => {
                 const dose = parseFloat(day.dose);
@@ -3574,9 +3592,9 @@ ${currentRecommendations}
                 else if (dose > 4.5) bgColor = 'bg-orange-100 text-orange-800';
                 
                 return `<div class="flex flex-col items-center ${bgColor} px-2 py-2 rounded-lg shadow-sm border flex-1 min-w-0">
-                    <span class="text-xs font-semibold">${daysShort[index]}</span>
-                    <span class="text-sm font-bold">${day.dose}</span>
-                    <span class="text-xs opacity-75">מ"ג</span>
+                    <span class="text-xs font-semibold">${day.day}</span>
+                    <span class="text-xs opacity-75">${day.date}</span>
+                    <span class="text-sm font-bold">${day.dose} מ"ג</span>
                 </div>`;
             }).join('');
             
