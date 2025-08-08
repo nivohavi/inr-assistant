@@ -143,10 +143,23 @@
         function setManualApiKey() {
             const apiKey = document.getElementById('manualApiKey').value.trim();
             if (apiKey && apiKey.startsWith('sk-')) {
+                // Select the best available model
+                let bestModel = 'gpt-3.5-turbo'; // Default
+                if (window.availableModels) {
+                    // Prefer gpt-4o if available, then gpt-4, then gpt-3.5-turbo
+                    if (window.availableModels.includes('gpt-4o')) {
+                        bestModel = 'gpt-4o';
+                    } else if (window.availableModels.includes('gpt-4')) {
+                        bestModel = 'gpt-4';
+                    } else if (window.availableModels.includes('gpt-3.5-turbo')) {
+                        bestModel = 'gpt-3.5-turbo';
+                    }
+                }
+                
                 // Create a temporary AI_CONFIG
                 window.AI_CONFIG = {
                     OPENAI_API_KEY: apiKey,
-                    AI_MODEL: 'text-davinci-003', // Use text-davinci-003 as fallback
+                    AI_MODEL: bestModel,
                     MAX_TOKENS: 1000,
                     TEMPERATURE: 0.3
                 };
@@ -160,7 +173,7 @@
                 updateAIStatus();
                 
                 hideManualKeyInput();
-                alert('✅ מפתח API נשמר! AI אמיתי זמין כעת.\n\nאם יש בעיות, לחץ על "בדוק מפתח API" לראות מודלים זמינים.');
+                alert(`✅ מפתח API נשמר! AI אמיתי זמין כעת.\n\nמודל: ${bestModel}\n\nאם יש בעיות, לחץ על "בדוק מפתח API" לראות מודלים זמינים.`);
             } else {
                 alert('❌ מפתח API לא תקין. אנא הזן מפתח שמתחיל ב-sk-');
             }

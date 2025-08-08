@@ -22,7 +22,7 @@ class AIAnalyzer {
     async analyzeDiet(dietData, patientContext) {
         const prompt = this.buildPrompt(dietData, patientContext);
         const aiConfig = getAIConfig();
-        const model = aiConfig.AI_MODEL || 'text-davinci-003';
+        const model = aiConfig.AI_MODEL || 'gpt-3.5-turbo';
         
         console.log('🤖 Making OpenAI API call with:');
         console.log('- Model:', model);
