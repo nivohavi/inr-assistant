@@ -18,7 +18,7 @@ class AIAnalyzer {
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: AI_CONFIG.AI_MODEL || 'gpt-4',
+                    model: getAIConfig().AI_MODEL || 'gpt-4',
                     messages: [
                         {
                             role: 'system',
@@ -29,8 +29,8 @@ class AIAnalyzer {
                             content: prompt
                         }
                     ],
-                    max_tokens: AI_CONFIG.MAX_TOKENS || 1000,
-                    temperature: AI_CONFIG.TEMPERATURE || 0.3
+                    max_tokens: getAIConfig().MAX_TOKENS || 1000,
+                    temperature: getAIConfig().TEMPERATURE || 0.3
                 })
             });
 
@@ -141,24 +141,33 @@ ${patientContext.recentMeasurements ? patientContext.recentMeasurements.map(m =>
     }
 }
 
-// Configuration - Uses external AI_CONFIG from ai-config.js
-// If AI_CONFIG is not defined, use defaults
-const AI_CONFIG = window.AI_CONFIG || {
-    OPENAI_API_KEY: 'your-openai-api-key-here',
-    FALLBACK_TO_MOCK: true
-};
+// Configuration - Uses secure configuration system
+function getAIConfig() {
+    // Try secure config first
+    if (window.secureConfig) {
+        return window.secureConfig.getAIConfig();
+    }
+    // Fallback to direct AI_CONFIG
+    return window.AI_CONFIG || {
+        OPENAI_API_KEY: 'your-openai-api-key-here',
+        FALLBACK_TO_MOCK: true
+    };
+}
 
 // Initialize AI Analyzer
 let aiAnalyzer = null;
 
 function initializeAI() {
-    const apiKey = AI_CONFIG.OPENAI_API_KEY;
+    const aiConfig = getAIConfig();
+    const apiKey = aiConfig.OPENAI_API_KEY;
+    
     if (apiKey && apiKey !== 'your-openai-api-key-here' && apiKey.startsWith('sk-')) {
         aiAnalyzer = new AIAnalyzer(apiKey);
         console.log('🤖 AI Analyzer initialized with OpenAI GPT-4');
         return true;
     } else {
         console.log('🧪 No valid OpenAI API key found, using mock AI');
+        console.log('API Key status:', apiKey ? 'Present but invalid' : 'Missing');
         return false;
     }
 }

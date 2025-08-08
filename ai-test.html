@@ -81,18 +81,24 @@
             const statusDiv = document.getElementById('aiStatus');
             const statusText = document.getElementById('aiStatusText');
             
+            // Try to get AI config from multiple sources
+            let aiConfig = null;
             if (window.secureConfig) {
-                const aiConfig = window.secureConfig.getAIConfig();
-                if (aiConfig.OPENAI_API_KEY && aiConfig.OPENAI_API_KEY !== 'your-openai-api-key-here') {
-                    statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-green-100 text-green-700';
-                    statusText.textContent = '🤖 AI אמיתי זמין';
-                } else {
-                    statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700';
-                    statusText.textContent = '🧪 AI מדומה';
-                }
+                aiConfig = window.secureConfig.getAIConfig();
+            } else if (window.AI_CONFIG) {
+                aiConfig = window.AI_CONFIG;
+            }
+            
+            if (aiConfig && aiConfig.OPENAI_API_KEY && 
+                aiConfig.OPENAI_API_KEY !== 'your-openai-api-key-here' && 
+                aiConfig.OPENAI_API_KEY.startsWith('sk-')) {
+                statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-green-100 text-green-700';
+                statusText.textContent = '🤖 AI אמיתי זמין';
+                console.log('✅ Real AI detected:', aiConfig.OPENAI_API_KEY.substring(0, 10) + '...');
             } else {
-                statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-red-100 text-red-700';
-                statusText.textContent = '❌ תצורה חסרה';
+                statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700';
+                statusText.textContent = '🧪 AI מדומה';
+                console.log('⚠️ Mock AI - Config:', aiConfig ? 'Present but invalid' : 'Missing');
             }
         }
         
