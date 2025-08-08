@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="config.js"></script>
-    <script src="ai-config.js"></script>
+    <script src="ai-config.js" onerror="console.warn('ai-config.js not found, using fallback')"></script>
     <script src="setup-secure.js"></script>
     <script src="ai-integration.js"></script>
 </head>
@@ -35,11 +35,27 @@
                 </div>
             </div>
             
-            <div class="mt-6">
+            <div class="mt-6 flex gap-4 items-center">
                 <button onclick="testAnalysis()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center gap-2">
                     <i data-lucide="brain" class="w-5 h-5"></i>
                     בדוק ניתוח AI
                 </button>
+                <button onclick="showManualKeyInput()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition duration-200 flex items-center gap-2">
+                    <i data-lucide="key" class="w-4 h-4"></i>
+                    הזן מפתח API
+                </button>
+            </div>
+            
+            <!-- Manual API Key Input Modal -->
+            <div id="apiKeyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-semibold mb-4">הזן מפתח OpenAI API</h3>
+                    <input type="password" id="manualApiKey" placeholder="sk-..." class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4">
+                    <div class="flex gap-2">
+                        <button onclick="setManualApiKey()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">שמור</button>
+                        <button onclick="hideManualKeyInput()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">ביטול</button>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -108,6 +124,43 @@
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(updateAIStatus, 1000); // Wait for scripts to load
         });
+        
+        // Manual API Key Functions
+        function showManualKeyInput() {
+            document.getElementById('apiKeyModal').classList.remove('hidden');
+            document.getElementById('manualApiKey').focus();
+        }
+        
+        function hideManualKeyInput() {
+            document.getElementById('apiKeyModal').classList.add('hidden');
+            document.getElementById('manualApiKey').value = '';
+        }
+        
+        function setManualApiKey() {
+            const apiKey = document.getElementById('manualApiKey').value.trim();
+            if (apiKey && apiKey.startsWith('sk-')) {
+                // Create a temporary AI_CONFIG
+                window.AI_CONFIG = {
+                    OPENAI_API_KEY: apiKey,
+                    AI_MODEL: 'gpt-4',
+                    MAX_TOKENS: 1000,
+                    TEMPERATURE: 0.3
+                };
+                
+                // Reinitialize AI
+                if (window.initializeAI) {
+                    window.initializeAI();
+                }
+                
+                // Update status
+                updateAIStatus();
+                
+                hideManualKeyInput();
+                alert('✅ מפתח API נשמר! AI אמיתי זמין כעת.');
+            } else {
+                alert('❌ מפתח API לא תקין. אנא הזן מפתח שמתחיל ב-sk-');
+            }
+        }
         
         // Mock patient info for testing
         const mockPatientInfo = {
