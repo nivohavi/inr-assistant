@@ -1,0 +1,27 @@
+// Test the exact API key format
+async function testKeyFormat() {
+    const apiKey = ''; // Your actual key
+    
+    console.log('Key length:', apiKey.length);
+    console.log('Key starts with:', apiKey.substring(0, 10));
+    console.log('Key ends with:', apiKey.substring(apiKey.length - 10));
+    
+    // Test with a simple models call first
+    try {
+        const response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Models endpoint works');
+        } else {
+            console.log('❌ Models endpoint failed:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Models test error:', error);
+    }
+}
+
+testKeyFormat();
