@@ -6,13 +6,20 @@
     <title>בדיקת AI - ניתוח תזונה</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="setup-secure.js"></script>
+    <script src="ai-integration.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen p-8">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-3xl font-bold text-gray-900 mb-8 text-center">בדיקת ניתוח AI לתזונה</h1>
         
         <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">הזן נתוני תזונה לבדיקה</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">הזן נתוני תזונה לבדיקה</h2>
+                <div id="aiStatus" class="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600">
+                    <span id="aiStatusText">בודק תצורה...</span>
+                </div>
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -68,6 +75,31 @@
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
+        
+        // Check AI configuration status
+        function updateAIStatus() {
+            const statusDiv = document.getElementById('aiStatus');
+            const statusText = document.getElementById('aiStatusText');
+            
+            if (window.secureConfig) {
+                const aiConfig = window.secureConfig.getAIConfig();
+                if (aiConfig.OPENAI_API_KEY && aiConfig.OPENAI_API_KEY !== 'your-openai-api-key-here') {
+                    statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-green-100 text-green-700';
+                    statusText.textContent = '🤖 AI אמיתי זמין';
+                } else {
+                    statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700';
+                    statusText.textContent = '🧪 AI מדומה';
+                }
+            } else {
+                statusDiv.className = 'text-sm px-3 py-1 rounded-full bg-red-100 text-red-700';
+                statusText.textContent = '❌ תצורה חסרה';
+            }
+        }
+        
+        // Update status when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(updateAIStatus, 1000); // Wait for scripts to load
+        });
         
         // Mock patient info for testing
         const mockPatientInfo = {
@@ -134,7 +166,20 @@
                 recentMeasurements: mockInrData
             };
             
-            return await localDietAnalysis(context);
+            // Try real AI first, fallback to mock
+            try {
+                if (window.secureConfig && window.secureConfig.getAIConfig().OPENAI_API_KEY) {
+                    console.log('🤖 Using real AI analysis...');
+                    const aiAnalyzer = new AIAnalyzer(window.secureConfig.getAIConfig().OPENAI_API_KEY);
+                    return await aiAnalyzer.analyzeDiet({ dietToday, dietTomorrow }, context);
+                } else {
+                    console.log('🧪 Using mock AI analysis...');
+                    return await localDietAnalysis(context);
+                }
+            } catch (error) {
+                console.warn('Real AI failed, using mock:', error);
+                return await localDietAnalysis(context);
+            }
         }
         
         async function localDietAnalysis(context) {
@@ -303,11 +348,21 @@
         function displayTestResults(analysis) {
             const resultsDiv = document.getElementById('results');
             
+            // Check if this is a real AI response or mock
+            const isRealAI = analysis && typeof analysis === 'object' && analysis.vitaminKImpact === undefined;
+            
+            if (isRealAI) {
+                // Real AI response - use the display function from ai-integration.js
+                displayDietAnalysis(analysis);
+                return;
+            }
+            
+            // Mock AI response - use the original display logic
             let html = `
                 <div class="bg-white rounded-xl shadow-lg p-6">
                     <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
                         <i data-lucide="brain" class="w-6 h-6 text-purple-600"></i>
-                        תוצאות ניתוח AI
+                        תוצאות ניתוח AI (Mock)
                     </h3>
                     <div class="space-y-4">
             `;
