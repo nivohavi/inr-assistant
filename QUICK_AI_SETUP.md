@@ -1,6 +1,6 @@
 # 🚀 Quick AI Setup - Just Add Your OpenAI Key!
 
-## ⚡ Super Simple Setup (3 Steps)
+## ⚡ Super Simple Setup (1 File, 1 Key)
 
 ### Step 1: Get Your OpenAI API Key
 1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
@@ -8,18 +8,15 @@
 3. Click "Create new secret key"
 4. Copy the key (starts with `sk-`)
 
-### Step 2: Add Your Key
-**Option A: Manual Setup**
-1. Edit `ai-config.js`
-2. Replace `'your-openai-api-key-here'` with your actual key
-3. Save the file
-
-**Option B: Automatic Setup**
-1. Open the app in your browser
-2. Open browser console (F12)
-3. Run: `setupOpenAI()`
-4. Enter your API key when prompted
-5. Save the downloaded file
+### Step 2: Add Your Key (ONE PLACE ONLY!)
+**Edit `ai-config.js` and replace this line:**
+```javascript
+OPENAI_API_KEY: 'your-openai-api-key-here',
+```
+**With your actual key:**
+```javascript
+OPENAI_API_KEY: 'sk-your-actual-api-key-here',
+```
 
 ### Step 3: Test It!
 1. Refresh the page
@@ -27,16 +24,18 @@
 3. Click "ניתוח AI"
 4. Get real GPT-4 analysis! 🎉
 
-## 🔧 Configuration Options
+## 🔧 Alternative Setup Methods
 
-In `ai-config.js`, you can adjust:
+### Method A: Browser Console Helper
+1. Open the app in your browser
+2. Press `F12` to open console
+3. Run: `setupOpenAI()`
+4. Follow the instructions shown
 
-```javascript
-AI_MODEL: 'gpt-4',           // or 'gpt-3.5-turbo' (cheaper)
-MAX_TOKENS: 1000,            // Response length
-TEMPERATURE: 0.3,            // Creativity level (0-1)
-MAX_COST_PER_ANALYSIS: 0.05, // Cost limit per analysis
-```
+### Method B: Download New Config
+1. Open browser console (F12)
+2. Run: `editConfigFile()`
+3. Replace your existing `ai-config.js` with the downloaded file
 
 ## 💰 Cost Estimate
 - **GPT-4**: ~$0.03 per analysis
@@ -80,4 +79,4 @@ With real AI, you'll get:
 
 ---
 
-**That's it! Just add your API key and you're ready to go! 🚀** 
+**That's it! Just edit ONE file and you're ready to go! 🚀** 

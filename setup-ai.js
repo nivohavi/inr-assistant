@@ -14,30 +14,54 @@ function setupOpenAI() {
         return;
     }
     
-    // Create the config content
+    // Show instructions for manual setup
+    alert(`✅ API Key Validated!
+
+📝 Next Steps:
+1. Open ai-config.js in your editor
+2. Replace 'your-openai-api-key-here' with:
+   ${apiKey}
+3. Save the file
+4. Refresh this page
+
+Your API key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}`);
+}
+
+function editConfigFile() {
+    const apiKey = prompt('Enter your OpenAI API key (starts with sk-):');
+    
+    if (!apiKey) {
+        alert('No API key entered. Setup cancelled.');
+        return;
+    }
+    
+    if (!apiKey.startsWith('sk-')) {
+        alert('Invalid API key format. Should start with "sk-"');
+        return;
+    }
+    
+    // Create a simple config file with just the API key
     const configContent = `// AI Configuration - Add your OpenAI API key here
 // Get your API key from: https://platform.openai.com/api-keys
 
 const AI_CONFIG = {
     // 🔑 ADD YOUR OPENAI API KEY HERE
-    // Replace 'your-openai-api-key-here' with your actual API key
-    // Example: 'sk-1234567890abcdef1234567890abcdef1234567890abcdef'
     OPENAI_API_KEY: '${apiKey}',
     
     // 🧠 AI Model Settings
     AI_MODEL: 'gpt-4', // or 'gpt-3.5-turbo' for cheaper option
     MAX_TOKENS: 1000,
-    TEMPERATURE: 0.3, // Lower = more consistent, Higher = more creative
+    TEMPERATURE: 0.3,
     
     // 🔄 Fallback Settings
-    FALLBACK_TO_MOCK: true, // Use mock AI if real AI fails
+    FALLBACK_TO_MOCK: true,
     
     // 💰 Cost Control
     ENABLE_COST_LIMITS: true,
-    MAX_COST_PER_ANALYSIS: 0.05, // $0.05 max per analysis
+    MAX_COST_PER_ANALYSIS: 0.05,
     
     // 🚀 Performance Settings
-    REQUEST_TIMEOUT: 30000, // 30 seconds
+    REQUEST_TIMEOUT: 30000,
     RETRY_ATTEMPTS: 2,
     
     // 🔒 Security
@@ -82,7 +106,7 @@ if (typeof module !== 'undefined' && module.exports) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    alert('✅ ai-config.js file created with your API key!\n\nNext steps:\n1. Save the file to your project folder\n2. Refresh the page\n3. Test the AI analysis!');
+    alert('✅ ai-config.js file created!\n\nNext steps:\n1. Replace your existing ai-config.js with this file\n2. Refresh the page\n3. Test the AI analysis!');
 }
 
 function testAIConnection() {
@@ -106,16 +130,21 @@ function testAIConnection() {
 
 // Add setup functions to window for easy access
 window.setupOpenAI = setupOpenAI;
+window.editConfigFile = editConfigFile;
 window.testAIConnection = testAIConnection;
 
 console.log(`
 🤖 AI Setup Helper Available!
 
 To configure your OpenAI API key:
+
+Option 1 - Manual Setup (Recommended):
 1. Run: setupOpenAI()
-2. Enter your API key when prompted
-3. Save the downloaded ai-config.js file
-4. Refresh the page
+2. Follow the instructions to edit ai-config.js manually
+
+Option 2 - Download New File:
+1. Run: editConfigFile()
+2. Replace your existing ai-config.js with the downloaded file
 
 To test your configuration:
 - Run: testAIConnection()
