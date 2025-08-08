@@ -1,5 +1,6 @@
-# AI Configuration with API Keys
+# Configuration files with sensitive data
 ai-config.js
+config.js
 
 # Environment variables
 .env

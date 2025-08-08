@@ -1,0 +1,56 @@
+// AI Configuration Template
+// Copy this file to ai-config.js and add your actual API keys
+// This file is safe to commit to public repositories
+
+const AI_CONFIG = {
+    // 🔑 ADD YOUR OPENAI API KEY HERE
+    // Replace 'your-openai-api-key-here' with your actual API key
+    // Example: 'sk-1234567890abcdef1234567890abcdef1234567890abcdef'
+    OPENAI_API_KEY: 'your-openai-api-key-here',
+    
+    // 🧠 AI Model Settings
+    AI_MODEL: 'gpt-4', // or 'gpt-3.5-turbo' for cheaper option
+    MAX_TOKENS: 1000,
+    TEMPERATURE: 0.3, // Lower = more consistent, Higher = more creative
+    
+    // 🔄 Fallback Settings
+    FALLBACK_TO_MOCK: true, // Use mock AI if real AI fails
+    
+    // 💰 Cost Control
+    ENABLE_COST_LIMITS: true,
+    MAX_COST_PER_ANALYSIS: 0.05, // $0.05 max per analysis
+    
+    // 🚀 Performance Settings
+    REQUEST_TIMEOUT: 30000, // 30 seconds
+    RETRY_ATTEMPTS: 2,
+    
+    // 🔒 Security
+    ENABLE_RATE_LIMITING: true,
+    MAX_REQUESTS_PER_MINUTE: 10
+};
+
+// Validate configuration
+function validateAIConfig() {
+    if (!AI_CONFIG.OPENAI_API_KEY || AI_CONFIG.OPENAI_API_KEY === 'your-openai-api-key-here') {
+        console.warn('⚠️ OpenAI API key not configured. Using mock AI.');
+        return false;
+    }
+    
+    if (!AI_CONFIG.OPENAI_API_KEY.startsWith('sk-')) {
+        console.error('❌ Invalid OpenAI API key format. Should start with "sk-"');
+        return false;
+    }
+    
+    console.log('✅ OpenAI API key configured successfully!');
+    return true;
+}
+
+// Initialize validation
+document.addEventListener('DOMContentLoaded', function() {
+    validateAIConfig();
+});
+
+// Export for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AI_CONFIG;
+} 

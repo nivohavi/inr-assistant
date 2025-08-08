@@ -6,48 +6,104 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       
-    - name: Create config.js from secrets
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Create Secure Config Files
+      env:
+        FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+        FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+        FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        AI_MODEL: ${{ secrets.AI_MODEL || 'gpt-4' }}
+        MAX_TOKENS: ${{ secrets.MAX_TOKENS || '1000' }}
+        TEMPERATURE: ${{ secrets.TEMPERATURE || '0.3' }}
+        FALLBACK_TO_MOCK: ${{ secrets.FALLBACK_TO_MOCK || 'true' }}
+        ENABLE_COST_LIMITS: ${{ secrets.ENABLE_COST_LIMITS || 'true' }}
+        MAX_COST_PER_ANALYSIS: ${{ secrets.MAX_COST_PER_ANALYSIS || '0.05' }}
+        REQUEST_TIMEOUT: ${{ secrets.REQUEST_TIMEOUT || '30000' }}
+        RETRY_ATTEMPTS: ${{ secrets.RETRY_ATTEMPTS || '2' }}
+        ENABLE_RATE_LIMITING: ${{ secrets.ENABLE_RATE_LIMITING || 'true' }}
+        MAX_REQUESTS_PER_MINUTE: ${{ secrets.MAX_REQUESTS_PER_MINUTE || '10' }}
       run: |
+        # Create Firebase config
         cat > config.js << EOF
-        // Firebase configuration for GitHub Pages deployment
+        // Firebase Configuration - Generated from GitHub Secrets
         const firebaseConfig = {
-            apiKey: "${{ secrets.FIREBASE_API_KEY }}",
-            authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
-            projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
-            storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
-            messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
-            appId: "${{ secrets.FIREBASE_APP_ID }}",
-            measurementId: "${{ secrets.FIREBASE_MEASUREMENT_ID }}"
+            apiKey: "$FIREBASE_API_KEY",
+            authDomain: "$FIREBASE_AUTH_DOMAIN",
+            projectId: "$FIREBASE_PROJECT_ID",
+            storageBucket: "$FIREBASE_STORAGE_BUCKET",
+            messagingSenderId: "$FIREBASE_MESSAGING_SENDER_ID",
+            appId: "$FIREBASE_APP_ID",
+            measurementId: "$FIREBASE_MEASUREMENT_ID"
         };
         EOF
         
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-      
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: '.'
+        # Create AI config
+        cat > ai-config.js << EOF
+        // AI Configuration - Generated from GitHub Secrets
+        const AI_CONFIG = {
+            OPENAI_API_KEY: "$OPENAI_API_KEY",
+            AI_MODEL: "$AI_MODEL",
+            MAX_TOKENS: $MAX_TOKENS,
+            TEMPERATURE: $TEMPERATURE,
+            FALLBACK_TO_MOCK: $FALLBACK_TO_MOCK,
+            ENABLE_COST_LIMITS: $ENABLE_COST_LIMITS,
+            MAX_COST_PER_ANALYSIS: $MAX_COST_PER_ANALYSIS,
+            REQUEST_TIMEOUT: $REQUEST_TIMEOUT,
+            RETRY_ATTEMPTS: $RETRY_ATTEMPTS,
+            ENABLE_RATE_LIMITING: $ENABLE_RATE_LIMITING,
+            MAX_REQUESTS_PER_MINUTE: $MAX_REQUESTS_PER_MINUTE
+        };
+        
+        // Validate configuration
+        function validateAIConfig() {
+            if (!AI_CONFIG.OPENAI_API_KEY || AI_CONFIG.OPENAI_API_KEY === '') {
+                console.warn('⚠️ OpenAI API key not configured. Using mock AI.');
+                return false;
+            }
+            
+            if (!AI_CONFIG.OPENAI_API_KEY.startsWith('sk-')) {
+                console.error('❌ Invalid OpenAI API key format. Should start with "sk-"');
+                return false;
+            }
+            
+            console.log('✅ OpenAI API key configured successfully!');
+            return true;
+        }
+        
+        // Initialize validation
+        document.addEventListener('DOMContentLoaded', function() {
+            validateAIConfig();
+        });
+        
+        // Export for use in other files
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = AI_CONFIG;
+        }
+        EOF
+        
+        echo "✅ Configuration files created successfully"
         
     - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4 
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        publish_branch: gh-pages 

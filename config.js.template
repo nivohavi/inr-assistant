@@ -1,19 +1,13 @@
-// Firebase configuration template
-// Copy this file to config.js and fill in your Firebase project details
-// Get these values from your Firebase project settings
+// Firebase Configuration Template
+// Copy this file to config.js and add your actual Firebase keys
+// This file is safe to commit to public repositories
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY_HERE",
+    apiKey: "YOUR_FIREBASE_API_KEY",
     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
     projectId: "YOUR_PROJECT_ID",
     storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    messagingSenderId: "YOUR_SENDER_ID",
     appId: "YOUR_APP_ID",
     measurementId: "YOUR_MEASUREMENT_ID"
-};
-
-// Note: Firebase API keys for web applications are meant to be public
-// The real security is handled by:
-// 1. Firebase Security Rules
-// 2. API key restrictions in Google Cloud Console
-// 3. Firebase Authentication 
+}; 
