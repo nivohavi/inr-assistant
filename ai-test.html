@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת AI - ניתוח תזונה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8 text-center">בדיקת ניתוח AI לתזונה</h1>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">הזן נתוני תזונה לבדיקה</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">מה אכלתי היום?</label>
+                    <textarea id="dietToday" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="תאר את הארוחות שלך היום..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">מה אני מתכנן לאכול מחר?</label>
+                    <textarea id="dietTomorrow" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="תאר את הארוחות המתוכננות למחר..."></textarea>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <button onclick="testAnalysis()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center gap-2">
+                    <i data-lucide="brain" class="w-5 h-5"></i>
+                    בדוק ניתוח AI
+                </button>
+            </div>
+        </div>
+        
+        <div id="results" class="hidden">
+            <!-- Results will be populated here -->
+        </div>
+        
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">דוגמאות לבדיקה:</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-800 mb-2">דוגמה 1: צריכה גבוהה של ויטמין K</h4>
+                    <p class="text-sm text-gray-600">היום: כרוב מבושל, ברוקולי, תרד</p>
+                    <p class="text-sm text-gray-600">מחר: סלט חסה, אספרגוס</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-800 mb-2">דוגמה 2: אלכוהול</h4>
+                    <p class="text-sm text-gray-600">היום: יין אדום עם הארוחה</p>
+                    <p class="text-sm text-gray-600">מחר: אוכל רגיל</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-800 mb-2">דוגמה 3: אשכולית</h4>
+                    <p class="text-sm text-gray-600">היום: מיץ אשכולית בבוקר</p>
+                    <p class="text-sm text-gray-600">מחר: אוכל רגיל</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-800 mb-2">דוגמה 4: תזונה קבועה</h4>
+                    <p class="text-sm text-gray-600">היום: אוכל רגיל, מעט ירקות</p>
+                    <p class="text-sm text-gray-600">מחר: אוכל דומה</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Mock patient info for testing
+        const mockPatientInfo = {
+            name: 'מטופל בדיקה',
+            age: 65,
+            weight: 70,
+            targetMin: 2.0,
+            targetMax: 3.0
+        };
+        
+        // Mock INR data for testing
+        const mockInrData = [
+            { date: '2024-01-01', inr: 2.5, dose: 5.0 },
+            { date: '2024-01-08', inr: 2.8, dose: 5.0 },
+            { date: '2024-01-15', inr: 2.3, dose: 5.0 }
+        ];
+        
+        // Copy the AI analysis functions from the main app
+        async function testAnalysis() {
+            const dietToday = document.getElementById('dietToday').value.trim();
+            const dietTomorrow = document.getElementById('dietTomorrow').value.trim();
+            
+            if (!dietToday && !dietTomorrow) {
+                alert('אנא הזן לפחות תזונה של היום או של מחר לניתוח');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                        <span class="text-purple-600 font-medium">מנתח תזונה...</span>
+                    </div>
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
+            
+            try {
+                const analysis = await performDietAnalysis(dietToday, dietTomorrow);
+                displayTestResults(analysis);
+            } catch (error) {
+                console.error('Analysis error:', error);
+                resultsDiv.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="text-red-600 text-center">
+                            <i data-lucide="alert-circle" class="w-8 h-8 mx-auto mb-2"></i>
+                            <p>שגיאה בניתוח. נסה שוב.</p>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+        
+        async function performDietAnalysis(dietToday, dietTomorrow) {
+            const context = {
+                patientInfo: mockPatientInfo,
+                targetRange: { min: 2.0, max: 3.0 },
+                currentINR: 2.3,
+                currentDose: 5.0,
+                dietToday: dietToday,
+                dietTomorrow: dietTomorrow,
+                recentMeasurements: mockInrData
+            };
+            
+            return await localDietAnalysis(context);
+        }
+        
+        async function localDietAnalysis(context) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const analysis = {
+                vitaminKImpact: analyzeVitaminKContent(context.dietToday, context.dietTomorrow),
+                dietaryInteractions: analyzeDietaryInteractions(context),
+                recommendations: generateDietaryRecommendations(context),
+                riskAssessment: assessDietaryRisks(context),
+                doseAdjustment: calculateDoseAdjustment(context)
+            };
+            
+            return analysis;
+        }
+        
+        function analyzeVitaminKContent(dietToday, dietTomorrow) {
+            const vitaminKFoods = {
+                'כרוב': 'high',
+                'ברוקולי': 'high',
+                'תרד': 'high',
+                'חסה': 'medium',
+                'אספרגוס': 'medium',
+                'אבוקדו': 'medium',
+                'שמן זית': 'low',
+                'ביצים': 'low',
+                'חלב': 'low'
+            };
+            
+            const todayImpact = calculateFoodImpact(dietToday, vitaminKFoods);
+            const tomorrowImpact = calculateFoodImpact(dietTomorrow, vitaminKFoods);
+            
+            return {
+                today: todayImpact,
+                tomorrow: tomorrowImpact,
+                overall: (todayImpact + tomorrowImpact) / 2
+            };
+        }
+        
+        function calculateFoodImpact(diet, foodImpact) {
+            if (!diet) return 0;
+            
+            let impact = 0;
+            const dietLower = diet.toLowerCase();
+            
+            Object.keys(foodImpact).forEach(food => {
+                if (dietLower.includes(food.toLowerCase())) {
+                    switch (foodImpact[food]) {
+                        case 'high': impact += 2; break;
+                        case 'medium': impact += 1; break;
+                        case 'low': impact += 0.5; break;
+                    }
+                }
+            });
+            
+            return Math.min(impact, 5);
+        }
+        
+        function analyzeDietaryInteractions(context) {
+            const interactions = [];
+            
+            if (context.dietToday.toLowerCase().includes('יין') || 
+                context.dietToday.toLowerCase().includes('בירה') ||
+                context.dietToday.toLowerCase().includes('אלכוהול')) {
+                interactions.push({
+                    type: 'alcohol',
+                    severity: 'medium',
+                    description: 'אלכוהול יכול להגביר את השפעת הקומדין',
+                    recommendation: 'הימנע מאלכוהול או הגבל לכמות קטנה'
+                });
+            }
+            
+            if (context.dietToday.toLowerCase().includes('אשכולית') ||
+                context.dietTomorrow.toLowerCase().includes('אשכולית')) {
+                interactions.push({
+                    type: 'grapefruit',
+                    severity: 'high',
+                    description: 'אשכולית משפיעה על פירוק הקומדין בכבד',
+                    recommendation: 'הימנע מאשכולית ומיץ אשכולית'
+                });
+            }
+            
+            return interactions;
+        }
+        
+        function generateDietaryRecommendations(context) {
+            const recommendations = [];
+            
+            const todayK = calculateFoodImpact(context.dietToday, {
+                'כרוב': 'high', 'ברוקולי': 'high', 'תרד': 'high'
+            });
+            const tomorrowK = calculateFoodImpact(context.dietTomorrow, {
+                'כרוב': 'high', 'ברוקולי': 'high', 'תרד': 'high'
+            });
+            
+            if (todayK === 0 && tomorrowK > 0) {
+                recommendations.push({
+                    type: 'vitamin_k_increase',
+                    description: 'הוספת ירקות עליים מחר עלולה להפחית את ה-INR',
+                    action: 'שקול להגדיל את המינון ב-0.5 מ"ג למחר'
+                });
+            } else if (todayK > 0 && tomorrowK === 0) {
+                recommendations.push({
+                    type: 'vitamin_k_decrease',
+                    description: 'הפחתת ירקות עליים מחר עלולה להגביר את ה-INR',
+                    action: 'שקול להפחית את המינון ב-0.5 מ"ג למחר'
+                });
+            }
+            
+            return recommendations;
+        }
+        
+        function assessDietaryRisks(context) {
+            const risks = [];
+            
+            const todayK = calculateFoodImpact(context.dietToday, {
+                'כרוב': 'high', 'ברוקולי': 'high', 'תרד': 'high'
+            });
+            
+            if (todayK > 3) {
+                risks.push({
+                    level: 'medium',
+                    description: 'צריכה גבוהה של ויטמין K היום',
+                    impact: 'עלול להפחית את ה-INR'
+                });
+            }
+            
+            if (context.dietToday.toLowerCase().includes('יין') || 
+                context.dietToday.toLowerCase().includes('בירה')) {
+                risks.push({
+                    level: 'high',
+                    description: 'צריכת אלכוהול',
+                    impact: 'עלול להגביר את השפעת הקומדין ולהגביר סיכון לדימום'
+                });
+            }
+            
+            return risks;
+        }
+        
+        function calculateDoseAdjustment(context) {
+            let adjustment = 0;
+            let reason = '';
+            
+            const todayK = calculateFoodImpact(context.dietToday, {
+                'כרוב': 'high', 'ברוקולי': 'high', 'תרד': 'high'
+            });
+            const tomorrowK = calculateFoodImpact(context.dietTomorrow, {
+                'כרוב': 'high', 'ברוקולי': 'high', 'תרד': 'high'
+            });
+            
+            if (tomorrowK - todayK > 1.5) {
+                adjustment += 0.5;
+                reason = 'הגדלת צריכת ויטמין K מחר';
+            } else if (todayK - tomorrowK > 1.5) {
+                adjustment -= 0.5;
+                reason = 'הפחתת צריכת ויטמין K מחר';
+            }
+            
+            return {
+                adjustment: adjustment,
+                reason: reason,
+                recommendedDose: context.currentDose ? context.currentDose + adjustment : null
+            };
+        }
+        
+        function displayTestResults(analysis) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                        <i data-lucide="brain" class="w-6 h-6 text-purple-600"></i>
+                        תוצאות ניתוח AI
+                    </h3>
+                    <div class="space-y-4">
+            `;
+            
+            // Vitamin K Impact
+            if (analysis.vitaminKImpact.overall > 0) {
+                html += `
+                    <div class="bg-blue-50 p-4 rounded-lg border-r-4 border-blue-400">
+                        <h4 class="font-semibold text-blue-800 mb-2">🍃 השפעת ויטמין K</h4>
+                        <p class="text-blue-700 text-sm">צריכת ויטמין K: ${analysis.vitaminKImpact.overall.toFixed(1)}/5</p>
+                        <p class="text-blue-600 text-xs">${analysis.vitaminKImpact.overall > 2 ? 'צריכה גבוהה - עלול להפחית INR' : 'צריכה מתונה - יציב'}</p>
+                    </div>
+                `;
+            }
+            
+            // Dietary Interactions
+            if (analysis.dietaryInteractions.length > 0) {
+                html += `
+                    <div class="bg-orange-50 p-4 rounded-lg border-r-4 border-orange-400">
+                        <h4 class="font-semibold text-orange-800 mb-2">⚠️ אינטראקציות תזונתיות</h4>
+                        ${analysis.dietaryInteractions.map(interaction => `
+                            <div class="mb-2">
+                                <p class="text-orange-700 text-sm font-medium">${interaction.description}</p>
+                                <p class="text-orange-600 text-xs">${interaction.recommendation}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Recommendations
+            if (analysis.recommendations.length > 0) {
+                html += `
+                    <div class="bg-green-50 p-4 rounded-lg border-r-4 border-green-400">
+                        <h4 class="font-semibold text-green-800 mb-2">💡 המלצות</h4>
+                        ${analysis.recommendations.map(rec => `
+                            <div class="mb-2">
+                                <p class="text-green-700 text-sm">${rec.description}</p>
+                                <p class="text-green-600 text-xs font-medium">${rec.action}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Risk Assessment
+            if (analysis.riskAssessment.length > 0) {
+                html += `
+                    <div class="bg-red-50 p-4 rounded-lg border-r-4 border-red-400">
+                        <h4 class="font-semibold text-red-800 mb-2">🚨 הערכת סיכונים</h4>
+                        ${analysis.riskAssessment.map(risk => `
+                            <div class="mb-2">
+                                <p class="text-red-700 text-sm font-medium">${risk.description}</p>
+                                <p class="text-red-600 text-xs">${risk.impact}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Dose Adjustment
+            if (analysis.doseAdjustment.adjustment !== 0) {
+                const adjustmentColor = analysis.doseAdjustment.adjustment > 0 ? 'green' : 'orange';
+                html += `
+                    <div class="bg-${adjustmentColor}-50 p-4 rounded-lg border-r-4 border-${adjustmentColor}-400">
+                        <h4 class="font-semibold text-${adjustmentColor}-800 mb-2">💊 התאמת מינון מומלצת</h4>
+                        <p class="text-${adjustmentColor}-700 text-sm">${analysis.doseAdjustment.reason}</p>
+                        <p class="text-${adjustmentColor}-600 text-xs font-medium">
+                            מינון מומלץ למחר: ${analysis.doseAdjustment.recommendedDose.toFixed(1)} מ"ג
+                        </p>
+                    </div>
+                `;
+            }
+            
+            if (html.includes('space-y-4')) {
+                html += `</div></div>`;
+            } else {
+                html = `
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="bg-gray-50 p-4 rounded-lg border-r-4 border-gray-400">
+                            <p class="text-gray-700 text-sm">לא זוהו השפעות משמעותיות של התזונה על ה-INR</p>
+                            <p class="text-gray-600 text-xs">המשך בתזונה הקבועה שלך</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html> 
