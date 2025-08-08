@@ -146,7 +146,7 @@
                 // Create a temporary AI_CONFIG
                 window.AI_CONFIG = {
                     OPENAI_API_KEY: apiKey,
-                    AI_MODEL: 'gpt-3.5-turbo', // Try gpt-3.5-turbo first
+                    AI_MODEL: 'text-davinci-003', // Use text-davinci-003 as fallback
                     MAX_TOKENS: 1000,
                     TEMPERATURE: 0.3
                 };
@@ -160,7 +160,7 @@
                 updateAIStatus();
                 
                 hideManualKeyInput();
-                alert('✅ מפתח API נשמר! AI אמיתי זמין כעת.');
+                alert('✅ מפתח API נשמר! AI אמיתי זמין כעת.\n\nאם יש בעיות, לחץ על "בדוק מפתח API" לראות מודלים זמינים.');
             } else {
                 alert('❌ מפתח API לא תקין. אנא הזן מפתח שמתחיל ב-sk-');
             }
@@ -184,7 +184,17 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('✅ API Key test successful:', data);
-                    alert('✅ מפתח API תקין! זמינים ' + data.data.length + ' מודלים.');
+                    
+                    // Check what models are available
+                    const availableModels = data.data.map(model => model.id).filter(id => 
+                        id.includes('gpt') || id.includes('text-')
+                    );
+                    console.log('📋 Available models:', availableModels);
+                    
+                    // Store available models for use
+                    window.availableModels = availableModels;
+                    
+                    alert('✅ מפתח API תקין! זמינים ' + data.data.length + ' מודלים.\n\nזמינים: ' + availableModels.slice(0, 5).join(', ') + (availableModels.length > 5 ? '...' : ''));
                 } else {
                     const errorText = await response.text();
                     console.error('❌ API Key test failed:', errorText);

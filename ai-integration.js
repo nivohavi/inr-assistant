@@ -22,7 +22,7 @@ class AIAnalyzer {
     async analyzeDiet(dietData, patientContext) {
         const prompt = this.buildPrompt(dietData, patientContext);
         const aiConfig = getAIConfig();
-        const model = aiConfig.AI_MODEL || 'gpt-4';
+        const model = aiConfig.AI_MODEL || 'text-davinci-003';
         
         console.log('🤖 Making OpenAI API call with:');
         console.log('- Model:', model);
@@ -30,25 +30,43 @@ class AIAnalyzer {
         console.log('- Max tokens:', aiConfig.MAX_TOKENS || 1000);
         
         try {
-            const requestBody = {
-                model: model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.`
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                max_tokens: aiConfig.MAX_TOKENS || 1000,
-                temperature: aiConfig.TEMPERATURE || 0.3
-            };
+            let requestBody;
+            let endpoint;
             
+            // Use different endpoints based on model type
+            if (model.startsWith('gpt-')) {
+                // Chat completions endpoint
+                endpoint = 'https://api.openai.com/v1/chat/completions';
+                requestBody = {
+                    model: model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.`
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    max_tokens: aiConfig.MAX_TOKENS || 1000,
+                    temperature: aiConfig.TEMPERATURE || 0.3
+                };
+            } else {
+                // Completions endpoint for older models
+                endpoint = 'https://api.openai.com/v1/completions';
+                requestBody = {
+                    model: model,
+                    prompt: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.\n\n${prompt}`,
+                    max_tokens: aiConfig.MAX_TOKENS || 1000,
+                    temperature: aiConfig.TEMPERATURE || 0.3
+                };
+            }
+            
+            console.log('📤 Using endpoint:', endpoint);
             console.log('📤 Request body:', requestBody);
             
-            const response = await fetch(this.baseURL, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,7 +83,18 @@ class AIAnalyzer {
 
             const data = await response.json();
             console.log('✅ OpenAI API Response:', data);
-            return this.parseAIResponse(data.choices[0].message.content);
+            
+            // Handle different response formats
+            let responseText;
+            if (model.startsWith('gpt-')) {
+                // Chat completions response
+                responseText = data.choices[0].message.content;
+            } else {
+                // Completions response
+                responseText = data.choices[0].text;
+            }
+            
+            return this.parseAIResponse(responseText);
         } catch (error) {
             console.error('AI Analysis error:', error);
             throw error;
