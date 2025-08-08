@@ -9,36 +9,50 @@ class AIAnalyzer {
 
     async analyzeDiet(dietData, patientContext) {
         const prompt = this.buildPrompt(dietData, patientContext);
+        const aiConfig = getAIConfig();
+        const model = aiConfig.AI_MODEL || 'gpt-4';
+        
+        console.log('🤖 Making OpenAI API call with:');
+        console.log('- Model:', model);
+        console.log('- API Key starts with:', this.apiKey.substring(0, 10) + '...');
+        console.log('- Max tokens:', aiConfig.MAX_TOKENS || 1000);
         
         try {
+            const requestBody = {
+                model: model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.`
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: aiConfig.MAX_TOKENS || 1000,
+                temperature: aiConfig.TEMPERATURE || 0.3
+            };
+            
+            console.log('📤 Request body:', requestBody);
+            
             const response = await fetch(this.baseURL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`
                 },
-                body: JSON.stringify({
-                    model: getAIConfig().AI_MODEL || 'gpt-4',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.`
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: getAIConfig().MAX_TOKENS || 1000,
-                    temperature: getAIConfig().TEMPERATURE || 0.3
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
-                throw new Error(`OpenAI API error: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ OpenAI API Error Response:', errorText);
+                throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('✅ OpenAI API Response:', data);
             return this.parseAIResponse(data.choices[0].message.content);
         } catch (error) {
             console.error('AI Analysis error:', error);
