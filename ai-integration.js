@@ -199,14 +199,18 @@ ${patientContext.recentMeasurements ? patientContext.recentMeasurements.map(m =>
 // Configuration - Uses secure configuration system
 function getAIConfig() {
     // Try secure config first
-    if (window.secureConfig) {
-        return window.secureConfig.getAIConfig();
+    if (window.secureConfig && window.secureConfig.getAIConfig) {
+        const config = window.secureConfig.getAIConfig();
+        if (config && config.OPENAI_API_KEY) {
+            return config;
+        }
     }
     // Fallback to direct AI_CONFIG
-    return window.AI_CONFIG || {
-        OPENAI_API_KEY: 'your-openai-api-key-here',
-        FALLBACK_TO_MOCK: true
-    };
+    if (window.AI_CONFIG && window.AI_CONFIG.OPENAI_API_KEY) {
+        return window.AI_CONFIG;
+    }
+    // Return null if no valid config found
+    return null;
 }
 
 // Initialize AI Analyzer
@@ -214,6 +218,12 @@ let aiAnalyzer = null;
 
 function initializeAI() {
     const aiConfig = getAIConfig();
+    
+    if (!aiConfig) {
+        console.log('🧪 No AI config found, using mock AI');
+        return false;
+    }
+    
     const apiKey = aiConfig.OPENAI_API_KEY;
     
     if (apiKey && apiKey !== 'your-openai-api-key-here' && apiKey.startsWith('sk-')) {
