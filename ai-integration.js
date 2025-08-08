@@ -18,19 +18,19 @@ class AIAnalyzer {
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4',
+                    model: AI_CONFIG.AI_MODEL || 'gpt-4',
                     messages: [
                         {
                             role: 'system',
-                            content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew.`
+                            content: `You are a medical AI assistant specializing in INR (International Normalized Ratio) management and Coumadin (warfarin) therapy. You analyze dietary patterns and their impact on INR levels. Provide responses in Hebrew. Be precise and medical in your analysis.`
                         },
                         {
                             role: 'user',
                             content: prompt
                         }
                     ],
-                    max_tokens: 1000,
-                    temperature: 0.3
+                    max_tokens: AI_CONFIG.MAX_TOKENS || 1000,
+                    temperature: AI_CONFIG.TEMPERATURE || 0.3
                 })
             });
 
@@ -153,12 +153,12 @@ let aiAnalyzer = null;
 
 function initializeAI() {
     const apiKey = AI_CONFIG.OPENAI_API_KEY;
-    if (apiKey && apiKey !== 'your-openai-api-key-here') {
+    if (apiKey && apiKey !== 'your-openai-api-key-here' && apiKey.startsWith('sk-')) {
         aiAnalyzer = new AIAnalyzer(apiKey);
-        console.log('AI Analyzer initialized with OpenAI');
+        console.log('🤖 AI Analyzer initialized with OpenAI GPT-4');
         return true;
     } else {
-        console.log('No OpenAI API key found, using mock AI');
+        console.log('🧪 No valid OpenAI API key found, using mock AI');
         return false;
     }
 }
