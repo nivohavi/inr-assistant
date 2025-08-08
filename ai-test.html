@@ -44,6 +44,10 @@
                     <i data-lucide="key" class="w-4 h-4"></i>
                     הזן מפתח API
                 </button>
+                <button onclick="testApiKey()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition duration-200 flex items-center gap-2">
+                    <i data-lucide="test-tube" class="w-4 h-4"></i>
+                    בדוק מפתח API
+                </button>
             </div>
             
             <!-- Manual API Key Input Modal -->
@@ -142,7 +146,7 @@
                 // Create a temporary AI_CONFIG
                 window.AI_CONFIG = {
                     OPENAI_API_KEY: apiKey,
-                    AI_MODEL: 'gpt-4',
+                    AI_MODEL: 'gpt-3.5-turbo', // Try gpt-3.5-turbo first
                     MAX_TOKENS: 1000,
                     TEMPERATURE: 0.3
                 };
@@ -159,6 +163,36 @@
                 alert('✅ מפתח API נשמר! AI אמיתי זמין כעת.');
             } else {
                 alert('❌ מפתח API לא תקין. אנא הזן מפתח שמתחיל ב-sk-');
+            }
+        }
+        
+        // Test API key function
+        async function testApiKey() {
+            const apiKey = window.AI_CONFIG?.OPENAI_API_KEY;
+            if (!apiKey) {
+                alert('❌ אין מפתח API להבדיקה');
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/models', {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ API Key test successful:', data);
+                    alert('✅ מפתח API תקין! זמינים ' + data.data.length + ' מודלים.');
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ API Key test failed:', errorText);
+                    alert('❌ מפתח API לא תקין: ' + response.status + ' - ' + errorText);
+                }
+            } catch (error) {
+                console.error('❌ API Key test error:', error);
+                alert('❌ שגיאה בבדיקת מפתח API: ' + error.message);
             }
         }
         

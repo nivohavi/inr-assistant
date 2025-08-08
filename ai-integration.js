@@ -4,7 +4,19 @@
 class AIAnalyzer {
     constructor(apiKey) {
         this.apiKey = apiKey;
-        this.baseURL = 'https://api.openai.com/v1/chat/completions';
+        // Handle different API key types
+        if (apiKey.startsWith('sk-svcacct-')) {
+            // Service account key - might need different endpoint
+            this.baseURL = 'https://api.openai.com/v1/chat/completions';
+            console.log('🔧 Using service account API key');
+        } else if (apiKey.startsWith('sk-')) {
+            // Standard OpenAI API key
+            this.baseURL = 'https://api.openai.com/v1/chat/completions';
+            console.log('🔧 Using standard OpenAI API key');
+        } else {
+            this.baseURL = 'https://api.openai.com/v1/chat/completions';
+            console.log('🔧 Unknown API key format, using default endpoint');
+        }
     }
 
     async analyzeDiet(dietData, patientContext) {
